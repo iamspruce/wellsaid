@@ -18,9 +18,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN python -m spacy download en_core_web_sm
 
 # Setup Hugging Face cache directory and permissions
-# This can help manage where Hugging Face models are stored within the container
+# This directory will now also be used by language-tool-python for its downloads.
 ENV HF_HOME=/cache
 RUN mkdir -p /cache && chmod -R 777 /cache
+
+# Set environment variable for language-tool-python download directory
+# This redirects LanguageTool's cache to the shared /cache directory.
+ENV LANGUAGE_TOOL_DOWNLOAD_DIR=/cache
 
 # Copy the entire application code into the container
 # This copies your 'app' directory, including main.py, routers, models, etc.
