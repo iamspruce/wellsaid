@@ -1,21 +1,30 @@
 FROM python:3.10-slim
 
-# Set working directory
+# Set working directory inside the container
 WORKDIR /app
 
 # Install system dependencies
+# git is included for any potential future needs or if any dependency requires it for cloning
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Install Python dependencies from requirements.txt
+# Ensure requirements.txt is copied before installing to leverage Docker cache
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Setup Hugging Face cache
+# Download the spaCy English language model
+# This is crucial for resolving the "[E050] Can't find model 'en_core_web_sm'" error
+RUN python -m spacy download en_core_web_sm
+
+# Setup Hugging Face cache directory and permissions
+# This can help manage where Hugging Face models are stored within the container
 ENV HF_HOME=/cache
 RUN mkdir -p /cache && chmod -R 777 /cache
 
-# Copy app code
+# Copy the entire application code into the container
+# This copies your 'app' directory, including main.py, routers, models, etc.
 COPY app ./app
 
-# Run the FastAPI app
+# Command to run the FastAPI application using Uvicorn
+# Binds the app to all network interfaces (0.0.0.0) on port 7860
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
