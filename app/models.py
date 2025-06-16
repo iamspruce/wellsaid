@@ -1,4 +1,4 @@
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
 import torch
 
 device = torch.device("cpu")
@@ -29,3 +29,11 @@ def run_translation(text: str, target_lang: str):
     inputs = trans_tokenizer(f">>{target_lang}<< {text}", return_tensors="pt").to(device)
     outputs = trans_model.generate(**inputs)
     return trans_tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+
+# Add this at the bottom of models.py
+tone_classifier = pipeline("text-classification", model="bhadresh-savani/bert-base-uncased-emotion", top_k=1)
+
+def classify_tone(text: str):
+    result = tone_classifier(text)[0][0]
+    return result['label']

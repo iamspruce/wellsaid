@@ -6,3 +6,5 @@ sentencepiece
 pyspellchecker
 spacy
 nltk
+language-tool-python
+scikit-learn
