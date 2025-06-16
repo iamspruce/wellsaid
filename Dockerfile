@@ -1,35 +1,42 @@
+# Use the official Python 3.10 slim image
 FROM python:3.10-slim
 
-# Set working directory inside the container
+# Set the working directory inside the container
 WORKDIR /app
 
 # Install system dependencies
-# git is included for any potential future needs or if any dependency requires it for cloning
-# Install Java Runtime Environment (JRE) - crucial for language-tool-python
-RUN apt-get update && apt-get install -y git default-jre && rm -rf /var/lib/apt/lists/*
+# - git (optional, useful if pip dependencies are installed via git)
+# - default-jre is required for language_tool_python
+RUN apt-get update && apt-get install -y \
+    git \
+    default-jre \
+ && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies from requirements.txt
-# Ensure requirements.txt is copied before installing to leverage Docker cache
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Download the spaCy English language model
-# This is crucial for resolving the "[E050] Can't find model 'en_core_web_sm'" error
-RUN python -m spacy download en_core_web_sm
-
-# Setup Hugging Face cache directory and permissions
-# This directory will now also be used by language-tool-python for its downloads.
+# Set environment variables
+# - HF_HOME: used by Hugging Face models
+# - LANGUAGE_TOOL_DOWNLOAD_DIR: used by language_tool_python
+# - HOME: so that ~/.cache resolves to a writable folder
 ENV HF_HOME=/cache
+ENV LANGUAGE_TOOL_DOWNLOAD_DIR=/cache
+ENV HOME=/app
+
+# Create and set permissions for cache directory
 RUN mkdir -p /cache && chmod -R 777 /cache
 
-# Set environment variable for language-tool-python download directory
-# This redirects LanguageTool's cache to the shared /cache directory
-ENV LANGUAGE_TOOL_DOWNLOAD_DIR=/cache
+# Copy Python dependency file
+COPY requirements.txt .
 
-# Copy the entire application code into the container
-# This copies your 'app' directory, including main.py, routers, models, etc.
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Download spaCy English model
+RUN python -m spacy download en_core_web_sm
+
+# Copy application code into the container
 COPY app ./app
 
-# Command to run the FastAPI application using Uvicorn
-# Binds the app to all network interfaces (0.0.0.0) on port 7860
+# Expose the port (optional)
+EXPOSE 7860
+
+# Run the app using Uvicorn
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
