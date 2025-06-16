@@ -51,6 +51,9 @@ def analyze_text(payload: AnalyzeInput):
 
     # --- 1. Grammar Suggestions with Diffs ---
     # Get the grammatically corrected version of the original text.
+    # Note: The 'vennify/t5-base-grammar-correction' model's performance
+    # can vary. For more robust corrections, especially for subtle spelling
+    # and grammar errors, consider a larger or fine-tuned model if needed.
     corrected_grammar = models.run_grammar_correction(text)
     
     grammar_changes = []
@@ -97,13 +100,12 @@ def analyze_text(payload: AnalyzeInput):
     tone_suggestion_text = ""
     # Provide a simple tone suggestion based on the detected tone.
     # This logic can be expanded for more sophisticated suggestions based on context or user goals.
-    if detected_tone in ["neutral", "joy"]: # Example: if text is neutral or joyful, suggest a formal alternative
-        # Generate a formal tone version using FLAN-T5.
-        tone_suggestion_text = models.run_flan_prompt(prompts.tone_prompt(text, "formal"))
-    elif detected_tone == "anger":
-        tone_suggestion_text = models.run_flan_prompt(prompts.tone_prompt(text, "calm and professional"))
-    elif detected_tone == "sadness":
-        tone_suggestion_text = models.run_flan_prompt(prompts.tone_prompt(text, "more uplifting"))
+    if detected_tone in ["neutral", "joy", "sadness", "anger", "fear", "disgust", "surprise"]:
+        # For simplicity, we'll try to make neutral/joy more formal, and other strong emotions more neutral/calm.
+        if detected_tone in ["neutral", "joy"]:
+            tone_suggestion_text = models.run_flan_prompt(prompts.tone_prompt(text, "formal"))
+        else: # For emotions like anger, sadness, fear, etc., suggest a more neutral/calm tone
+            tone_suggestion_text = models.run_flan_prompt(prompts.tone_prompt(text, "neutral and calm"))
     else:
         # If no specific suggestion, indicate that the detected tone is generally fine.
         tone_suggestion_text = f"The detected tone '{detected_tone}' seems appropriate for general communication."

@@ -2,11 +2,14 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
 import torch
 
 # Set the device for model inference (CPU is used by default)
+# You can change to "cuda" if a compatible GPU is available for faster processing.
 device = torch.device("cpu")
 
 # --- Grammar model ---
 # Uses vennify/t5-base-grammar-correction for grammar correction tasks.
-# This model takes text and returns a grammatically corrected version.
+# Note: This model might not catch all subtle spelling or advanced grammar errors
+# as robustly as larger models or rule-based systems. Its performance depends on
+# its training data.
 grammar_tokenizer = AutoTokenizer.from_pretrained("vennify/t5-base-grammar-correction")
 grammar_model = AutoModelForSeq2SeqLM.from_pretrained("vennify/t5-base-grammar-correction").to(device)
 
@@ -47,6 +50,7 @@ def run_grammar_correction(text: str) -> str:
 def run_flan_prompt(prompt: str) -> str:
     """
     Runs a given prompt through the FLAN-T5 model to generate a response.
+    Includes advanced generation parameters for better output quality.
 
     Args:
         prompt (str): The prompt string to be processed by FLAN-T5.
@@ -56,8 +60,21 @@ def run_flan_prompt(prompt: str) -> str:
     """
     # Prepare the input for the FLAN-T5 model
     inputs = flan_tokenizer(prompt, return_tensors="pt").to(device)
-    # Generate the output based on the prompt
-    outputs = flan_model.generate(**inputs)
+    
+    # Generate the output with improved parameters:
+    # max_new_tokens: Limits the maximum length of the generated response.
+    # num_beams: Uses beam search for higher quality, less repetitive outputs.
+    # do_sample: Enables sampling, allowing for more diverse outputs.
+    # top_k, top_p: Control the sampling process, making it more focused and coherent.
+    outputs = flan_model.generate(
+        **inputs,
+        max_new_tokens=100,  # Limit output length to prevent rambling
+        num_beams=5,         # Use beam search for better quality
+        do_sample=True,      # Enable sampling for diversity
+        top_k=50,            # Sample from top 50 most probable tokens
+        top_p=0.95,          # Sample from tokens that cumulatively exceed 95% probability
+        temperature=0.7      # Controls randomness; lower means more deterministic
+    )
     # Decode the generated tokens back into a readable string
     return flan_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
@@ -67,7 +84,7 @@ def run_translation(text: str, target_lang: str) -> str:
 
     Args:
         text (str): The input text to be translated.
-        target_lang (str): The target language code (e.g., "fr" for French).
+        target_lang (str): The target language code (e.g., "fr" for French, "es" for Spanish).
 
     Returns:
         str: The translated text.
@@ -87,7 +104,7 @@ def classify_tone(text: str) -> str:
         text (str): The input text for tone classification.
 
     Returns:
-        str: The detected emotional label (e.g., 'neutral', 'joy', 'sadness').
+        str: The detected emotional label (e.g., 'neutral', 'joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise').
     """
     # The tone_classifier returns a list of dictionaries, where each dictionary
     # contains 'label' and 'score'. We extract the 'label' from the first (and only) result.
