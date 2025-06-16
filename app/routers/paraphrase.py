@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status # Import HTTPException and status
 from pydantic import BaseModel
 from app import models, prompts
 from app.core.security import verify_api_key
+import logging # Import logging
 
-# Create an APIRouter instance. This will handle routes specific to paraphrasing.
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
-class Input(BaseModel):
+class ParaphraseInput(BaseModel): # Renamed Input to ParaphraseInput for clarity
     """
     Pydantic BaseModel for validating the input request body for the /paraphrase endpoint.
     It expects a single field: 'text' (string).
@@ -14,17 +16,24 @@ class Input(BaseModel):
     text: str
 
 @router.post("/paraphrase", dependencies=[Depends(verify_api_key)])
-def paraphrase(input: Input):
+def paraphrase(payload: ParaphraseInput): # Renamed input to payload for consistency
     """
-    Endpoint to paraphrase the given text.
+    Paraphrases the provided text.
 
     Args:
-        input (Input): The request body containing the text to be paraphrased.
-        (dependencies=[Depends(verify_api_key)]): Ensures the API key is verified before execution.
+        payload (ParaphraseInput): The request body containing the text to be paraphrased.
 
     Returns:
-        dict: A dictionary containing the paraphrased result.
+        dict: A dictionary containing the paraphrased text.
     """
-    # Call the FLAN-T5 model with the paraphrase prompt to get the result.
-    paraphrased_text = models.run_flan_prompt(prompts.paraphrase_prompt(input.text))
-    return {"result": paraphrased_text}
+    text = payload.text
+    
+    try:
+        paraphrased_text = models.run_flan_prompt(prompts.paraphrase_prompt(text))
+        return {"result": paraphrased_text}
+    except Exception as e:
+        logger.error(f"Error in paraphrase: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred during paraphrasing: {e}"
+        )

@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status # Import HTTPException and status
 from pydantic import BaseModel
 from app import models
 from app.core.security import verify_api_key
+import logging # Import logging
 
-# Create an APIRouter instance. This will handle routes specific to translation.
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 class TranslateInput(BaseModel):
@@ -15,17 +17,25 @@ class TranslateInput(BaseModel):
     target_lang: str
 
 @router.post("/translate", dependencies=[Depends(verify_api_key)])
-def translate(input: TranslateInput):
+def translate(payload: TranslateInput): # Renamed input to payload for consistency
     """
-    Endpoint to translate the given text to a target language.
+    Translates the provided text to a target language.
 
     Args:
-        input (TranslateInput): The request body containing the text and target language.
-        (dependencies=[Depends(verify_api_key)]): Ensures the API key is verified before execution.
+        payload (TranslateInput): The request body containing the text and target language.
 
     Returns:
-        dict: A dictionary containing the translated result.
+        dict: A dictionary containing the translated text.
     """
-    # Call the translation model with the text and target language.
-    translated_text = models.run_translation(input.text, input.target_lang)
-    return {"result": translated_text}
+    text = payload.text
+    target_lang = payload.target_lang
+    
+    try:
+        translated_text = models.run_translation(text, target_lang)
+        return {"result": translated_text}
+    except Exception as e:
+        logger.error(f"Error in translate: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred during translation: {e}"
+        )

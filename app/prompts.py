@@ -95,3 +95,27 @@ def tone_analysis_prompt(text: str) -> str:
         str: The generated prompt.
     """
     return f"Analyze the tone of the following text and suggest improvements if needed: {text}"
+
+def vocabulary_prompt(text: str) -> str:
+    """
+    Generates a prompt to suggest vocabulary improvements for the given text.
+
+    Args:
+        text (str): The original text.
+
+    Returns:
+        str: The generated prompt.
+    """
+    return f"For the following text, identify any weak or overused words and suggest stronger, more precise synonyms or alternative phrasing. Provide suggestions as a list of 'original word/phrase -> suggested word/phrase': {text}"
+
+def conciseness_prompt(text: str) -> str:
+    """
+    Generates a prompt to make the given text more concise.
+
+    Args:
+        text (str): The original text.
+
+    Returns:
+        str: The generated prompt.
+    """
+    return f"Rewrite the following text to be more concise, removing any unnecessary words or phrases while retaining the original meaning: {text}"
