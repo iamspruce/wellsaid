@@ -23,7 +23,7 @@ ENV HF_HOME=/cache
 RUN mkdir -p /cache && chmod -R 777 /cache
 
 # Set environment variable for language-tool-python download directory
-# This redirects LanguageTool's cache to the shared /cache directory.
+# This redirects LanguageTool's cache to the shared /cache directory
 ENV LANGUAGE_TOOL_DOWNLOAD_DIR=/cache
 
 # Copy the entire application code into the container
