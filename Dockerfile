@@ -5,7 +5,8 @@ WORKDIR /app
 
 # Install system dependencies
 # git is included for any potential future needs or if any dependency requires it for cloning
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+# Install Java Runtime Environment (JRE) - crucial for language-tool-python
+RUN apt-get update && apt-get install -y git default-jre && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies from requirements.txt
 # Ensure requirements.txt is copied before installing to leverage Docker cache
