@@ -6,12 +6,10 @@ import torch
 device = torch.device("cpu")
 
 # --- Grammar model ---
-# Uses vennify/t5-base-grammar-correction for grammar correction tasks.
-# Note: This model might not catch all subtle spelling or advanced grammar errors
-# as robustly as larger models or rule-based systems. Its performance depends on
-# its training data.
-grammar_tokenizer = AutoTokenizer.from_pretrained("vennify/t5-base-grammar-correction")
-grammar_model = AutoModelForSeq2SeqLM.from_pretrained("vennify/t5-base-grammar-correction").to(device)
+# Changed to humarin/t5-small-grammar-correction for potentially better performance
+# on common spelling and grammar issues compared to vennify/t5-base-grammar-correction.
+grammar_tokenizer = AutoTokenizer.from_pretrained("humarin/t5-small-grammar-correction")
+grammar_model = AutoModelForSeq2SeqLM.from_pretrained("humarin/t5-small-grammar-correction").to(device)
 
 # --- FLAN-T5 for all prompts ---
 # Uses google/flan-t5-small for various text generation tasks based on prompts,
@@ -43,7 +41,15 @@ def run_grammar_correction(text: str) -> str:
     # Prepare the input for the grammar model by prefixing with "fix: "
     inputs = grammar_tokenizer(f"fix: {text}", return_tensors="pt").to(device)
     # Generate the corrected output
-    outputs = grammar_model.generate(**inputs)
+    outputs = grammar_model.generate(
+    **inputs,
+    max_new_tokens=50,  # adjust as needed
+    num_beams=5,
+    do_sample=True,
+    top_k=50,
+    top_p=0.95,
+    temperature=0.7
+)
     # Decode the generated tokens back into a readable string, skipping special tokens
     return grammar_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
@@ -64,15 +70,11 @@ def run_flan_prompt(prompt: str) -> str:
     # Generate the output with improved parameters:
     # max_new_tokens: Limits the maximum length of the generated response.
     # num_beams: Uses beam search for higher quality, less repetitive outputs.
-    # do_sample: Enables sampling, allowing for more diverse outputs.
-    # top_k, top_p: Control the sampling process, making it more focused and coherent.
+    # temperature: Controls randomness; lower means more deterministic.
     outputs = flan_model.generate(
         **inputs,
         max_new_tokens=100,  # Limit output length to prevent rambling
         num_beams=5,         # Use beam search for better quality
-        do_sample=True,      # Enable sampling for diversity
-        top_k=50,            # Sample from top 50 most probable tokens
-        top_p=0.95,          # Sample from tokens that cumulatively exceed 95% probability
         temperature=0.7      # Controls randomness; lower means more deterministic
     )
     # Decode the generated tokens back into a readable string

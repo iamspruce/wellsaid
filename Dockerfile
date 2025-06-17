@@ -22,6 +22,9 @@ RUN python -m spacy download en_core_web_sm
 ENV HF_HOME=/cache
 RUN mkdir -p /cache && chmod -R 777 /cache
 
+# ... other Dockerfile content ...
+ENV GRAMMAFREE_API_KEY="admin" 
+
 # Explicitly create and set permissions for /.cache
 # This is to address PermissionError: [Errno 13] Permission denied: '/.cache'
 # which language-tool-python might be trying to write to.
