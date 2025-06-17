@@ -8,8 +8,8 @@ device = torch.device("cpu")
 # --- Grammar model ---
 # Changed to deepashri/t5-small-grammar-correction, a publicly available model
 # for grammatical error correction. This model is fine-tuned from T5-small.
-grammar_tokenizer = AutoTokenizer.from_pretrained("deepashri/t5-small-grammar-correction")
-grammar_model = AutoModelForSeq2SeqLM.from_pretrained("deepashri/t5-small-grammar-correction").to(device)
+grammar_tokenizer = AutoTokenizer.from_pretrained("AventIQ-AI/t5-small-grammar-correction")
+grammar_model = AutoModelForSeq2SeqLM.from_pretrained("AventIQ-AI/t5-small-grammar-correction").to(device)
 
 # --- FLAN-T5 for all prompts ---
 # Uses google/flan-t5-small for various text generation tasks based on prompts,
