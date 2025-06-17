@@ -6,10 +6,10 @@ import torch
 device = torch.device("cpu")
 
 # --- Grammar model ---
-# Changed to humarin/t5-small-grammar-correction for potentially better performance
-# on common spelling and grammar issues compared to vennify/t5-base-grammar-correction.
-grammar_tokenizer = AutoTokenizer.from_pretrained("humarin/t5-small-grammar-correction")
-grammar_model = AutoModelForSeq2SeqLM.from_pretrained("humarin/t5-small-grammar-correction").to(device)
+# Changed to deepashri/t5-small-grammar-correction, a publicly available model
+# for grammatical error correction. This model is fine-tuned from T5-small.
+grammar_tokenizer = AutoTokenizer.from_pretrained("deepashri/t5-small-grammar-correction")
+grammar_model = AutoModelForSeq2SeqLM.from_pretrained("deepashri/t5-small-grammar-correction").to(device)
 
 # --- FLAN-T5 for all prompts ---
 # Uses google/flan-t5-small for various text generation tasks based on prompts,
@@ -38,18 +38,12 @@ def run_grammar_correction(text: str) -> str:
     Returns:
         str: The corrected text.
     """
-    # Prepare the input for the grammar model by prefixing with "fix: "
-    inputs = grammar_tokenizer(f"fix: {text}", return_tensors="pt").to(device)
+    # Prepare the input for the grammar model by prefixing with "grammar: " as per
+    # the 'deepashri/t5-small-grammar-correction' model's expected input format.
+    # Some grammar correction models expect a specific prefix like "grammar: " or "fix: ".
+    inputs = grammar_tokenizer(f"grammar: {text}", return_tensors="pt").to(device)
     # Generate the corrected output
-    outputs = grammar_model.generate(
-    **inputs,
-    max_new_tokens=50,  # adjust as needed
-    num_beams=5,
-    do_sample=True,
-    top_k=50,
-    top_p=0.95,
-    temperature=0.7
-)
+    outputs = grammar_model.generate(**inputs)
     # Decode the generated tokens back into a readable string, skipping special tokens
     return grammar_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
@@ -68,14 +62,14 @@ def run_flan_prompt(prompt: str) -> str:
     inputs = flan_tokenizer(prompt, return_tensors="pt").to(device)
     
     # Generate the output with improved parameters:
-    # max_new_tokens: Limits the maximum length of the generated response.
-    # num_beams: Uses beam search for higher quality, less repetitive outputs.
-    # temperature: Controls randomness; lower means more deterministic.
     outputs = flan_model.generate(
         **inputs,
-        max_new_tokens=100,  # Limit output length to prevent rambling
-        num_beams=5,         # Use beam search for better quality
-        temperature=0.7      # Controls randomness; lower means more deterministic
+        max_new_tokens=100,
+        num_beams=5,
+        do_sample=True,
+        top_k=50,
+        top_p=0.95,
+        temperature=0.7
     )
     # Decode the generated tokens back into a readable string
     return flan_tokenizer.decode(outputs[0], skip_special_tokens=True)
@@ -110,5 +104,5 @@ def classify_tone(text: str) -> str:
     """
     # The tone_classifier returns a list of dictionaries, where each dictionary
     # contains 'label' and 'score'. We extract the 'label' from the first (and only) result.
-    result = tone_classifier(text)[0][0] # Access the first item in the list, then the first element of that list
+    result = tone_classifier(text)[0][0]
     return result['label']
