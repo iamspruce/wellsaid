@@ -1,0 +1,100 @@
+# Python #
+############
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.env # Local environment variable files (e.g., for API keys)
+.venv/ # Another common virtual environment name
+
+# Byte-code files
+*.py[cod]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.memo
+*.reshape
+
+# Installer logs
+*.log
+*.egg
+
+# Unit test / coverage reports
+.coverage
+.tox/
+.nox/
+.hypothesis/
+htmlcov/
+.pytest_cache/
+
+# PyInstaller / cx_Freeze / py2app / etc.
+__pyinstaller__/
+*.spec
+_MEI*/
+build/
+dist/
+
+# Jupyter Notebook #
+####################
+.ipynb_checkpoints
+
+# IDEs and Editors #
+####################
+.vscode/ # VS Code settings
+.idea/ # IntelliJ IDEA / PyCharm settings
+*.swp # Vim swap files
+*~ # Backup files from editors
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files #
+######################
+.DS_Store # macOS
+.Trashes # macOS
+Thumbs.db # Windows
+ehthumbs.db # Windows
+*.stackdump # Linux stack dumps
+
+# Database files #
+##################
+*.sqlite3
+*.db
+
+# Specific to your project's caches
+# Hugging Face models cache (typically outside project, but good to include if you ever set HF_HOME within project)
+# On your local machine, the actual cache is usually in ~/.cache/huggingface/
+# If you ever mount a volume to /cache directly inside your project, you'd ignore that.
+# For typical usage, it's outside the repo.
+
+# LanguageTool download cache
+# If you explicitly set LANGUAGE_TOOL_DOWNLOAD_DIR to be inside your project,
+# e.g., to something like ./languagetool_cache, then you would uncomment/add that:
+# languagetool_cache/
+# On your local machine, this is often in ~/.cache/languagetool/ or ~/.languagetool.org/
+
+# If you specifically download models/data files INTO your project folder
+# (e.g., for SpaCy models if not in standard spaCy data dir)
+# spacy_models/
+
+# Log files created by your application
+*.log
