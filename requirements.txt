@@ -10,3 +10,8 @@ scikit-learn
 textstat
 numpy>=1.21
 pydantic_settings
+openai
+slowapi
+difflib
+asyncio
+pydantic
