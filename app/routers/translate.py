@@ -6,7 +6,7 @@ from app.core.security import verify_api_key
 router = APIRouter(prefix="/translate", tags=["Translate"])
 translator = Translator()
 
-@router.post("/to", dependencies=[Depends(verify_api_key)])
+@router.post("/", dependencies=[Depends(verify_api_key)])
 def translate_text(payload: TranslateRequest):
     result = translator.translate(
         text=payload.text,

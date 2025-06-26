@@ -26,6 +26,6 @@ def create_app() -> FastAPI:
 
     @app.get("/")
     def root():
-        return {"message": "Welcome to Grammafree API"}
+        return {"message": "Welcome to Wellsaid API"}
 
     return app
