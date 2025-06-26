@@ -1,0 +1,25 @@
+# Python specific files and directories
+*.pyc
+*.pyo
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+env/
+
+# Editor/IDE specific files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Common build/distribution files
+dist/
+build/
+*.egg-info/
+.DS_Store
+
+# Git specific files
+.git/
+.gitignore

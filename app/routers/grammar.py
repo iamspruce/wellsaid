@@ -1,61 +1,60 @@
-from fastapi import APIRouter, Depends, HTTPException, status # Import HTTPException and status
-from pydantic import BaseModel
-from app import models
+from fastapi import APIRouter, Depends, HTTPException, status
+from app.schemas.base import TextOnlyRequest
+from app.services.grammar import GrammarCorrector
 from app.core.security import verify_api_key
 import difflib
-import logging # Import logging
+import logging
 
+router = APIRouter(prefix="/grammar", tags=["Grammar"])
+corrector = GrammarCorrector()
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+def get_diff_issues(original: str, corrected: str):
+    matcher = difflib.SequenceMatcher(None, original, corrected)
+    issues = []
 
-class GrammarInput(BaseModel):
-    """
-    Pydantic BaseModel for validating the input request body for the /grammar_check endpoint.
-    It expects a single field: 'text' (string).
-    """
-    text: str
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == 'equal':
+            continue
 
-@router.post("/grammar_check", dependencies=[Depends(verify_api_key)])
-def grammar_check(payload: GrammarInput):
-    """
-    Corrects the grammar of the provided text and shows changes.
-
-    Args:
-        payload (GrammarInput): The request body containing the text to be analyzed.
-
-    Returns:
-        dict: A dictionary containing the corrected text and a list of changes.
-    """
-    original_text = payload.text
-    
-    try:
-        corrected_text = models.run_grammar_correction(original_text)
-        
-        grammar_changes = []
-        s = difflib.SequenceMatcher(None, original_text.split(), corrected_text.split())
-        
-        for opcode, i1, i2, j1, j2 in s.get_opcodes():
-            if opcode == 'replace':
-                original_part = ' '.join(original_text.split()[i1:i2])
-                corrected_part = ' '.join(corrected_text.split()[j1:j2])
-                grammar_changes.append(f"'{original_part}' \u2192 '{corrected_part}'")
-            elif opcode == 'delete':
-                deleted_part = ' '.join(original_text.split()[i1:i2])
-                grammar_changes.append(f"'{deleted_part}' removed")
-            elif opcode == 'insert':
-                inserted_part = ' '.join(corrected_text.split()[j1:j2])
-                grammar_changes.append(f"'{inserted_part}' added")
-
-        return {
-            "grammar": {
-                "corrected": corrected_text,
-                "changes": grammar_changes
-            }
+        issue = {
+            "offset": i1,
+            "length": i2 - i1,
+            "original": original[i1:i2],
+            "suggestion": corrected[j1:j2],
+            "context_before": original[max(0, i1 - 15):i1],
+            "context_after": original[i2:i2 + 15],
+            "message": "Grammar correction",
+            "line": original[:i1].count("\n") + 1,
+            "column": i1 - original[:i1].rfind("\n") if "\n" in original[:i1] else i1 + 1
         }
-    except Exception as e:
-        logger.error(f"Error in grammar_check: {e}", exc_info=True)
+        issues.append(issue)
+
+    return issues
+
+@router.post("/", dependencies=[Depends(verify_api_key)])
+def correct_grammar(payload: TextOnlyRequest):
+    text = payload.text.strip()
+
+    if not text:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred during grammar checking: {e}"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Input text cannot be empty."
         )
+
+    corrected = corrector.correct(text)
+
+    if corrected.startswith("Input text is empty."):
+        raise HTTPException(status_code=400, detail="Input text cannot be empty.")
+    elif corrected.startswith("An error occurred during grammar correction."):
+        raise HTTPException(status_code=500, detail=corrected)
+
+    issues = get_diff_issues(text, corrected)
+
+    return {
+        "grammar": {
+            "original_text": text,
+            "corrected_text_suggestion": corrected,
+            "issues": issues
+        }
+    }

@@ -6,6 +6,6 @@ sentencepiece
 pyspellchecker
 spacy
 nltk
-language-tool-python
 scikit-learn
 textstat
+numpy>=1.21
