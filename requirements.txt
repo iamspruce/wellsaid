@@ -9,3 +9,4 @@ nltk
 scikit-learn
 textstat
 numpy>=1.21
+pydantic_settings
