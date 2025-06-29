@@ -1,17 +1,18 @@
 import logging
-from .base import get_spacy
+from app.services.base import get_spacy, model_response, ServiceError
+
+logger = logging.getLogger(__name__)
 
 class VoiceDetector:
     def __init__(self):
         self.nlp = get_spacy()
 
-    def classify(self, text: str) -> str:
-        text = text.strip()
-        if not text:
-            logging.warning("Voice detection requested for empty input.")
-            return "Input text is empty."
-
+    def classify(self, text: str) -> dict:
         try:
+            text = text.strip()
+            if not text:
+                raise ServiceError("Input text is empty.")
+
             doc = self.nlp(text)
             passive_sentences = 0
             total_sentences = 0
@@ -24,10 +25,14 @@ class VoiceDetector:
                         break
 
             if total_sentences == 0:
-                return "Unknown"
+                return model_response(result="Unknown")
 
             ratio = passive_sentences / total_sentences
-            return "Passive" if ratio > 0.5 else "Active"
+            return model_response(result="Passive" if ratio > 0.5 else "Active")
+
+        except ServiceError as se:
+            return model_response(error=str(se))
         except Exception as e:
-            logging.error(f"Error during voice detection: {e}")
-            return "An error occurred during voice detection."
+            logger.error(f"Voice detection error: {e}")
+            return model_response(error="An error occurred during voice detection.")
+

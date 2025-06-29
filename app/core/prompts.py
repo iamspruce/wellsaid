@@ -7,9 +7,6 @@ def summarize_prompt(text: str) -> str:
 def clarity_prompt(text: str) -> str:
     return f"Improve the clarity of the following sentence:\n{text.strip()}"
 
-def conciseness_prompt(text: str) -> str:
-    return f"Make the following sentence more concise:\n{text.strip()}"
-
 def rewrite_prompt(text: str, instruction: str) -> str:
     return f"{instruction.strip()}\n{text.strip()}"
 
@@ -28,3 +25,4 @@ def concise_prompt(text: str) -> str:
         "removing any verbose phrases, redundant words, or unnecessary clauses. "
         "Maintain the original meaning and professional tone.\n" + text.strip()
     )
+

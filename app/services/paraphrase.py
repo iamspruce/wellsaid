@@ -1,7 +1,10 @@
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from app.services.base import get_cached_model, DEVICE, timed_model_load, model_response, ServiceError
+from app.core.config import settings
 import torch
-from .base import get_cached_model, DEVICE, timed_model_load
 import logging
+
+logger = logging.getLogger(__name__)
 
 class Paraphraser:
     def __init__(self):
@@ -9,20 +12,19 @@ class Paraphraser:
 
     def _load_model(self):
         def load_fn():
-            tokenizer = timed_model_load("paraphrase_tokenizer", lambda: AutoTokenizer.from_pretrained("humarin/chatgpt_paraphraser_on_T5_base"))
-            model = timed_model_load("paraphrase_model", lambda: AutoModelForSeq2SeqLM.from_pretrained("humarin/chatgpt_paraphraser_on_T5_base"))
+            tokenizer = timed_model_load("paraphrase_tokenizer", lambda: AutoTokenizer.from_pretrained(settings.PARAPHRASE_MODEL))
+            model = timed_model_load("paraphrase_model", lambda: AutoModelForSeq2SeqLM.from_pretrained(settings.PARAPHRASE_MODEL))
             model = model.to(DEVICE).eval()
             return tokenizer, model
         return get_cached_model("paraphrase", load_fn)
 
-    def paraphrase(self, text: str) -> str:
-        text = text.strip()
-        if not text:
-            logging.warning("Paraphrasing requested for empty input.")
-            return "Input text is empty."
-
-        prompt = f"paraphrase: {text} </s>"
+    def paraphrase(self, text: str) -> dict:
         try:
+            text = text.strip()
+            if not text:
+                raise ServiceError("Input text is empty.")
+
+            prompt = f"paraphrase: {text} </s>"
             with torch.no_grad():
                 inputs = self.tokenizer([prompt], return_tensors="pt", padding=True, truncation=True).to(DEVICE)
                 outputs = self.model.generate(
@@ -32,8 +34,11 @@ class Paraphraser:
                     num_return_sequences=1,
                     early_stopping=True
                 )
-                return self.tokenizer.decode(outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
-        except Exception as e:
-            logging.error(f"Error during paraphrasing: {e}")
-            return f"An error occurred during paraphrasing: {e}"
+                result = self.tokenizer.decode(outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
+                return model_response(result=result)
 
+        except ServiceError as se:
+            return model_response(error=str(se))
+        except Exception as e:
+            logger.error(f"Paraphrasing error: {e}")
+            return model_response(error="An error occurred during paraphrasing.")

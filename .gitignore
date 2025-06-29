@@ -5,8 +5,9 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
-env/
+.env
 venv/
+torch-venv/
 *.env # Local environment variable files (e.g., for API keys)
 .venv/ # Another common virtual environment name
 
