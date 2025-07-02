@@ -1,72 +1,120 @@
+import logging
 import yaml
 from pathlib import Path
 from typing import List, Dict
-from app.services.base import get_spacy, model_response, ServiceError
-from app.core.config import settings
-import logging
 
-logger = logging.getLogger(__name__)
+from app.services.base import load_spacy_model
+from app.core.config import settings, APP_NAME, SPACY_MODEL_ID
+from app.core.exceptions import ServiceError
+
+logger = logging.getLogger(f"{APP_NAME}.services.inclusive_language")
+
 
 class InclusiveLanguageChecker:
-    def __init__(self, rules_directory=settings.INCLUSIVE_RULES_DIR):
-        self.rules = self._load_inclusive_rules(rules_directory)
-        self.matcher = self._init_matcher()
+    def __init__(self, rules_directory: str = settings.INCLUSIVE_RULES_DIR):
+        self._nlp = None
+        self.matcher = None
+        self.rules = self._load_inclusive_rules(Path(rules_directory))
 
-    def _load_inclusive_rules(self, directory: str) -> Dict[str, Dict]:
+    def _load_inclusive_rules(self, rules_path: Path) -> Dict[str, Dict]:
+        """
+        Load YAML-based inclusive language rules from the given directory.
+        """
+        if not rules_path.is_dir():
+            logger.error(f"Inclusive language rules directory not found: {rules_path}")
+            raise ServiceError(
+                status_code=500,
+                detail=f"Inclusive language rules directory not found: {rules_path}"
+            )
+
         rules = {}
-        for path in Path(directory).glob("*.yml"):
+        for yaml_file in rules_path.glob("*.yml"):
             try:
-                with open(path, encoding="utf-8") as f:
+                with yaml_file.open(encoding="utf-8") as f:
                     rule_list = yaml.safe_load(f)
-                    if not isinstance(rule_list, list):
-                        logger.warning(f"Skipping malformed rule file: {path}")
-                        continue
-                    for rule in rule_list:
-                        note = rule.get("note", "")
-                        source = rule.get("source", "")
-                        considerate = rule.get("considerate", [])
-                        inconsiderate = rule.get("inconsiderate", [])
 
-                        if isinstance(considerate, str):
-                            considerate = [considerate]
-                        if isinstance(inconsiderate, str):
-                            inconsiderate = [inconsiderate]
+                if not isinstance(rule_list, list):
+                    logger.warning(f"Skipping non-list rule file: {yaml_file}")
+                    continue
 
-                        for phrase in inconsiderate:
-                            rules[phrase.lower()] = {
-                                "note": note,
-                                "considerate": considerate,
-                                "source": source,
-                                "type": rule.get("type", "basic")
-                            }
+                for rule in rule_list:
+                    inconsiderate = rule.get("inconsiderate", [])
+                    considerate = rule.get("considerate", [])
+                    note = rule.get("note", "")
+                    source = rule.get("source", "")
+                    rule_type = rule.get("type", "basic")
+
+                    # Ensure consistent formatting
+                    if isinstance(considerate, str):
+                        considerate = [considerate]
+                    if isinstance(inconsiderate, str):
+                        inconsiderate = [inconsiderate]
+
+                    for phrase in inconsiderate:
+                        rules[phrase.lower()] = {
+                            "considerate": considerate,
+                            "note": note,
+                            "source": source,
+                            "type": rule_type
+                        }
+
             except Exception as e:
-                logger.error(f"Error loading inclusive language rule from {path}: {e}")
+                logger.error(f"Error loading rule file {yaml_file}: {e}", exc_info=True)
+                raise ServiceError(
+                    status_code=500,
+                    detail=f"Failed to load inclusive language rules: {e}"
+                )
+
+        logger.info(f"Loaded {len(rules)} inclusive language rules from {rules_path}")
         return rules
 
-    def _init_matcher(self):
+    def _get_nlp(self):
+        """
+        Lazy-loads the spaCy model for NLP processing.
+        """
+        if self._nlp is None:
+            self._nlp = load_spacy_model(SPACY_MODEL_ID)
+        return self._nlp
+
+    def _init_matcher(self, nlp):
+        """
+        Initializes spaCy PhraseMatcher using loaded rules.
+        """
         from spacy.matcher import PhraseMatcher
-        matcher = PhraseMatcher(get_spacy().vocab, attr="LOWER")
+
+        matcher = PhraseMatcher(nlp.vocab, attr="LOWER")
         for phrase in self.rules:
-            matcher.add(phrase, [get_spacy().make_doc(phrase)])
-        logger.info(f"Loaded {len(self.rules)} inclusive language rules.")
+            matcher.add(phrase, [nlp.make_doc(phrase)])
+
+        logger.info(f"PhraseMatcher initialized with {len(self.rules)} phrases.")
         return matcher
 
-    def check(self, text: str) -> dict:
-        try:
-            text = text.strip()
-            if not text:
-                raise ServiceError("Input text is empty.")
+    async def check(self, text: str) -> dict:
+        """
+        Checks a string for non-inclusive language based on rule definitions.
+        """
+        text = text.strip()
+        if not text:
+            raise ServiceError(status_code=400, detail="Input text is empty for inclusive language check.")
 
-            nlp = get_spacy()
+        try:
+            nlp = self._get_nlp()
+            if self.matcher is None:
+                self.matcher = self._init_matcher(nlp)
+
             doc = nlp(text)
             matches = self.matcher(doc)
             results = []
             matched_spans = set()
 
+            # Match exact phrases
             for match_id, start, end in matches:
-                phrase_str = nlp.vocab.strings[match_id]
+                phrase = nlp.vocab.strings[match_id].lower()
+                if any(s <= start < e or s < end <= e for s, e in matched_spans):
+                    continue  # Avoid overlapping matches
+
                 matched_spans.add((start, end))
-                rule = self.rules.get(phrase_str.lower())
+                rule = self.rules.get(phrase)
                 if rule:
                     results.append({
                         "term": doc[start:end].text,
@@ -74,15 +122,18 @@ class InclusiveLanguageChecker:
                         "note": rule["note"],
                         "suggestions": rule["considerate"],
                         "context": doc[start:end].sent.text,
-                        "start": doc[start].idx,
-                        "end": doc[end - 1].idx + len(doc[end - 1]),
-                        "source": rule.get("source", "")
+                        "start_char": doc[start].idx,
+                        "end_char": doc[end - 1].idx + len(doc[end - 1]),
+                        "source": rule["source"]
                     })
 
+            # Match individual token lemmas (fallback)
             for token in doc:
                 lemma = token.lemma_.lower()
-                span_key = (token.i, token.i + 1)
-                if lemma in self.rules and span_key not in matched_spans:
+                if (token.i, token.i + 1) in matched_spans:
+                    continue  # Already matched in phrase
+
+                if lemma in self.rules:
                     rule = self.rules[lemma]
                     results.append({
                         "term": token.text,
@@ -90,15 +141,16 @@ class InclusiveLanguageChecker:
                         "note": rule["note"],
                         "suggestions": rule["considerate"],
                         "context": token.sent.text,
-                        "start": token.idx,
-                        "end": token.idx + len(token),
-                        "source": rule.get("source", "")
+                        "start_char": token.idx,
+                        "end_char": token.idx + len(token),
+                        "source": rule["source"]
                     })
 
-            return model_response(result=results)
+            return {"issues": results}
 
-        except ServiceError as se:
-            return model_response(error=str(se))
         except Exception as e:
-            logger.error(f"Inclusive language check error: {e}")
-            return model_response(error="An error occurred during inclusive language checking.")
+            logger.error(f"Inclusive language check error for text: '{text[:50]}...'", exc_info=True)
+            raise ServiceError(
+                status_code=500,
+                detail="An internal error occurred during inclusive language checking."
+            ) from e

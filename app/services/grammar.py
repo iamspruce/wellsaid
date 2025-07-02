@@ -1,78 +1,77 @@
 import difflib
 import logging
+from typing import List
+
 import torch
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-from app.services.base import (
-    get_cached_model, DEVICE, timed_model_load,
-    ServiceError, model_response
-)
+from app.services.base import load_hf_pipeline
 from app.core.config import settings
+from app.core.exceptions import ServiceError
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(f"{settings.APP_NAME}.services.grammar")
+
 
 class GrammarCorrector:
     def __init__(self):
-        self.tokenizer, self.model = self._load_model()
+        self._pipeline = None
 
-    def _load_model(self):
-        def load_fn():
-            tokenizer = timed_model_load(
-                "grammar_tokenizer",
-                lambda: AutoTokenizer.from_pretrained(settings.GRAMMAR_MODEL)
+    def _get_pipeline(self):
+        if self._pipeline is None:
+            logger.info("Loading grammar correction pipeline...")
+            self._pipeline = load_hf_pipeline(
+                model_id=settings.GRAMMAR_MODEL_ID,
+                task="text2text-generation",
+                feature_name="Grammar Correction"
             )
-            model = timed_model_load(
-                "grammar_model",
-                lambda: AutoModelForSeq2SeqLM.from_pretrained(settings.GRAMMAR_MODEL)
-            )
-            model = model.to(DEVICE).eval()
-            return tokenizer, model
+        return self._pipeline
 
-        return get_cached_model("grammar", load_fn)
+    async def correct(self, text: str) -> dict:
+        text = text.strip()
+        if not text:
+            raise ServiceError(status_code=400, detail="Input text is empty for grammar correction.")
 
-    def correct(self, text: str) -> dict:
         try:
-            text = text.strip()
-            if not text:
-                raise ServiceError("Input text is empty.")
+            pipeline = self._get_pipeline()
 
-            with torch.no_grad():
-                inputs = self.tokenizer([text], return_tensors="pt", truncation=True, padding=True).to(DEVICE)
-                outputs = self.model.generate(**inputs, max_length=256, num_beams=4, early_stopping=True)
-                corrected = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            result = pipeline(text, max_length=512, num_beams=4, early_stopping=True)
+            corrected = result[0]["generated_text"].strip()
+
+            if not corrected:
+                raise ServiceError(status_code=500, detail="Failed to decode grammar correction output.")
 
             issues = self.get_diff_issues(text, corrected)
 
-            return model_response(result={
+            return {
                 "original_text": text,
                 "corrected_text_suggestion": corrected,
                 "issues": issues
-            })
+            }
 
-        except ServiceError as se:
-            return model_response(error=str(se))
         except Exception as e:
-            logger.error(f"Grammar correction error: {e}", exc_info=True)
-            return model_response(error="An error occurred during grammar correction.")
+            logger.error(f"Grammar correction error for input: '{text[:50]}...'", exc_info=True)
+            raise ServiceError(status_code=500, detail="An internal error occurred during grammar correction.") from e
 
-    def get_diff_issues(self, original: str, corrected: str):
+    def get_diff_issues(self, original: str, corrected: str) -> List[dict]:
+        def safe_slice(s: str, start: int, end: int) -> str:
+            return s[max(0, start):min(len(s), end)]
+
         matcher = difflib.SequenceMatcher(None, original, corrected)
         issues = []
 
         for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-            if tag == 'equal':
+            if tag == "equal":
                 continue
 
             issues.append({
                 "offset": i1,
                 "length": i2 - i1,
-                "original": original[i1:i2],
-                "suggestion": corrected[j1:j2],
-                "context_before": original[max(0, i1 - 15):i1],
-                "context_after": original[i2:i2 + 15],
+                "original_segment": original[i1:i2],
+                "suggested_segment": corrected[j1:j2],
+                "context_before": safe_slice(original, i1 - 15, i1),
+                "context_after": safe_slice(original, i2, i2 + 15),
                 "message": "Grammar correction",
                 "line": original[:i1].count("\n") + 1,
-                "column": i1 - original[:i1].rfind("\n") if "\n" in original[:i1] else i1 + 1
+                "column": (i1 - original[:i1].rfind("\n") - 1) if "\n" in original[:i1] else i1 + 1
             })
 
         return issues

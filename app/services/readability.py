@@ -1,17 +1,18 @@
+# app/services/readability.py
 import textstat
 import logging
-from app.services.base import model_response, ServiceError
+from app.core.config import APP_NAME
+from app.core.exceptions import ServiceError
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(f"{APP_NAME}.services.readability")
 
 class ReadabilityScorer:
-    def compute(self, text: str) -> dict:
+    async def compute(self, text: str) -> dict:
         try:
             text = text.strip()
             if not text:
-                raise ServiceError("Input text is empty.")
+                raise ServiceError(status_code=400, detail="Input text is empty for readability scoring.")
 
-            # Compute scores
             scores = {
                 "flesch_reading_ease": textstat.flesch_reading_ease(text),
                 "flesch_kincaid_grade": textstat.flesch_kincaid_grade(text),
@@ -21,41 +22,39 @@ class ReadabilityScorer:
                 "automated_readability_index": textstat.automated_readability_index(text),
             }
 
-            # Friendly descriptions
             friendly_scores = {
                 "flesch_reading_ease": {
-                    "score": scores["flesch_reading_ease"],
+                    "score": round(scores["flesch_reading_ease"], 2),
                     "label": "Flesch Reading Ease",
                     "description": "Higher is easier. 60–70 is plain English; 90+ is very easy."
                 },
                 "flesch_kincaid_grade": {
-                    "score": scores["flesch_kincaid_grade"],
+                    "score": round(scores["flesch_kincaid_grade"], 2),
                     "label": "Flesch-Kincaid Grade Level",
                     "description": "U.S. school grade. 8.0 means an 8th grader can understand it."
                 },
                 "gunning_fog_index": {
-                    "score": scores["gunning_fog_index"],
+                    "score": round(scores["gunning_fog_index"], 2),
                     "label": "Gunning Fog Index",
                     "description": "Estimates years of formal education needed to understand."
                 },
                 "smog_index": {
-                    "score": scores["smog_index"],
+                    "score": round(scores["smog_index"], 2),
                     "label": "SMOG Index",
                     "description": "Also estimates required years of education."
                 },
                 "coleman_liau_index": {
-                    "score": scores["coleman_liau_index"],
+                    "score": round(scores["coleman_liau_index"], 2),
                     "label": "Coleman-Liau Index",
                     "description": "Grade level based on characters, not syllables."
                 },
                 "automated_readability_index": {
-                    "score": scores["automated_readability_index"],
+                    "score": round(scores["automated_readability_index"], 2),
                     "label": "Automated Readability Index",
                     "description": "Grade level using word and sentence lengths."
                 }
             }
 
-            # Flesch score guide
             ease_score = scores["flesch_reading_ease"]
             if ease_score >= 90:
                 summary = "Very easy to read. Easily understood by 11-year-olds."
@@ -68,13 +67,13 @@ class ReadabilityScorer:
             else:
                 summary = "Very difficult. Best understood by university graduates."
 
-            return model_response(result={
+            return {
                 "readability_summary": summary,
                 "scores": friendly_scores
-            })
+            }
 
-        except ServiceError as se:
-            return model_response(error=str(se))
         except Exception as e:
-            logger.error(f"Readability scoring error: {e}", exc_info=True)
-            return model_response(error="An error occurred during readability scoring.")
+            logger.error(f"Readability scoring error for text: '{text[:50]}...'", exc_info=True)
+            raise ServiceError(status_code=500, detail="An internal error occurred during readability scoring.") from e
+
+# You can continue pasting the rest of your services here for production hardening

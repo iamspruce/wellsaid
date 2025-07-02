@@ -1,49 +1,132 @@
-import torch
-from threading import Lock
 import logging
+from pathlib import Path
+from functools import lru_cache
+
+import torch
+from transformers import (
+    pipeline,
+    AutoTokenizer,
+    AutoModelForSequenceClassification,
+    AutoModelForSeq2SeqLM,
+    AutoModelForMaskedLM,
+)
+
+from sentence_transformers import SentenceTransformer
+
+from app.core.config import (
+    MODELS_DIR, SPACY_MODEL_ID, SENTENCE_TRANSFORMER_MODEL_ID,
+    OFFLINE_MODE
+)
+from app.core.exceptions import ModelNotDownloadedError
 
 logger = logging.getLogger(__name__)
 
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-logger.info(f"Using device: {DEVICE}")
+# ─────────────────────────────────────────────────────────────────────────────
+# 🧠 SpaCy
+# ─────────────────────────────────────────────────────────────────────────────
 
-_models = {}
-_models_lock = Lock()
+@lru_cache(maxsize=1)
+def load_spacy_model(model_id: str = SPACY_MODEL_ID):
+    import spacy
+    from spacy.util import is_package
 
+    logger.info(f"Loading spaCy model: {model_id}")
 
-def get_cached_model(model_name: str, load_fn):
-    with _models_lock:
-        if model_name not in _models:
-            logger.info(f"Loading model: {model_name}")
-            _models[model_name] = load_fn()
-        return _models[model_name]
+    if is_package(model_id):
+        return spacy.load(model_id)
 
+    possible_path = MODELS_DIR / model_id
+    if possible_path.exists():
+        return spacy.load(str(possible_path))
 
-def timed_model_load(label: str, load_fn):
+    raise RuntimeError(f"Could not find spaCy model '{model_id}' at {possible_path}")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🔤 Sentence Transformers
+# ─────────────────────────────────────────────────────────────────────────────
+
+@lru_cache(maxsize=1)
+def load_sentence_transformer_model(model_id: str = SENTENCE_TRANSFORMER_MODEL_ID) -> SentenceTransformer:
+    logger.info(f"Loading SentenceTransformer: {model_id}")
+    return SentenceTransformer(model_name_or_path=model_id, cache_folder=MODELS_DIR)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🤗 Hugging Face Pipelines (T5 models, classifiers, etc.)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _check_model_downloaded(model_id: str, cache_dir: str) -> bool:
+    model_path = Path(cache_dir) / model_id.replace("/", "_")
+    return model_path.exists()
+
+def _timed_load(name: str, fn):
     import time
     start = time.time()
-    model = load_fn()
-    logger.info(f"{label} loaded in {time.time() - start:.2f}s")
+    model = fn()
+    elapsed = round(time.time() - start, 2)
+    logger.info(f"[{name}] model loaded in {elapsed}s")
     return model
 
+@lru_cache(maxsize=2)
+def load_hf_pipeline(model_id: str, task: str, feature_name: str, **kwargs):
+    if OFFLINE_MODE and not _check_model_downloaded(model_id, str(MODELS_DIR)):
+        raise ModelNotDownloadedError(model_id, feature_name, "Model not found locally in offline mode.")
 
-_nlp = None
+    try:
+        # Choose appropriate AutoModel loader based on task
+        if task == "text-classification":
+            model_loader = AutoModelForSequenceClassification
+        elif task == "text2text-generation" or task.startswith("translation"):
+            model_loader = AutoModelForSeq2SeqLM
+        elif task == "fill-mask":
+            model_loader = AutoModelForMaskedLM
+        else:
+            raise ValueError(f"Unsupported task type '{task}' for feature '{feature_name}'.")
 
+        model = _timed_load(
+            f"{feature_name}:{model_id} (model)",
+            lambda: model_loader.from_pretrained(
+                model_id,
+                cache_dir=MODELS_DIR,
+                local_files_only=OFFLINE_MODE
+            )
+        )
 
-def get_spacy():
-    global _nlp
-    if _nlp is None:
-        import spacy
-        _nlp = spacy.load("en_core_web_sm")
-    return _nlp
+        tokenizer = _timed_load(
+            f"{feature_name}:{model_id} (tokenizer)",
+            lambda: AutoTokenizer.from_pretrained(
+                model_id,
+                cache_dir=MODELS_DIR,
+                local_files_only=OFFLINE_MODE
+            )
+        )
 
+        return pipeline(
+            task=task,
+            model=model,
+            tokenizer=tokenizer,
+            device=0 if torch.cuda.is_available() else -1,
+            **kwargs
+        )
 
-# Shared error and response
-class ServiceError(Exception):
-    def __init__(self, message: str):
-        super().__init__(message)
-        self.message = message
+    except Exception as e:
+        logger.error(f"Failed to load pipeline for '{feature_name}' - {model_id}: {e}", exc_info=True)
+        raise ModelNotDownloadedError(model_id, feature_name, str(e))
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 📚 NLTK
+# ─────────────────────────────────────────────────────────────────────────────
 
-def model_response(result: str = "", error: str = None) -> dict:
-    return {"result": result, "error": error}
+@lru_cache(maxsize=1)
+def ensure_nltk_resource(resource_name: str = "wordnet") -> None:
+    try:
+        import nltk
+        nltk.data.find(f"corpora/{resource_name}")
+    except (LookupError, ImportError):
+        if OFFLINE_MODE:
+            raise RuntimeError(f"NLTK resource '{resource_name}' not found in offline mode.")
+        nltk.download(resource_name)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🎯 Ready-to-use Loaders (for your app use)
+# ─────────────────────────────────────────────────────────────────────────────
+

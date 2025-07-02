@@ -1,45 +1,47 @@
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-import torch
 import logging
-from app.services.base import get_cached_model, DEVICE, timed_model_load, ServiceError, model_response
-from app.core.config import settings
+from app.services.base import load_hf_pipeline
+from app.core.config import settings, APP_NAME
+from app.core.exceptions import ServiceError
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(f"{APP_NAME}.services.translation")
 
 class Translator:
     def __init__(self):
-        self.tokenizer, self.model = self._load_model()
+        self._pipeline = None
 
-    def _load_model(self):
-        def load_fn():
-            tokenizer = timed_model_load("translate_tokenizer", lambda: AutoTokenizer.from_pretrained(settings.TRANSLATION_MODEL))
-            model = timed_model_load("translate_model", lambda: AutoModelForSeq2SeqLM.from_pretrained(settings.TRANSLATION_MODEL))
-            model = model.to(DEVICE).eval()
-            return tokenizer, model
-        return get_cached_model("translate", load_fn)
+    def _get_pipeline(self):
+        if self._pipeline is None:
+            logger.info("Loading translation pipeline...")
+            self._pipeline = load_hf_pipeline(
+                model_id=settings.TRANSLATION_MODEL_ID,
+                task="translation",
+                feature_name="Translation"
+            )
+        return self._pipeline
 
-    def translate(self, text: str, target_lang: str) -> dict:
+    async def translate(self, text: str, target_lang: str) -> dict:
+        text = text.strip()
+        target_lang = target_lang.strip()
+
+        if not text:
+            raise ServiceError(status_code=400, detail="Input text is empty for translation.")
+        if not target_lang:
+            raise ServiceError(status_code=400, detail="Target language is empty for translation.")
+        if target_lang not in settings.SUPPORTED_TRANSLATION_LANGUAGES:
+            raise ServiceError(
+                status_code=400,
+                detail=f"Unsupported target language: {target_lang}. "
+                       f"Supported languages are: {', '.join(settings.SUPPORTED_TRANSLATION_LANGUAGES)}"
+            )
+
         try:
-            text = text.strip()
-            target_lang = target_lang.strip()
-
-            if not text:
-                raise ServiceError("Input text is empty.")
-            if not target_lang:
-                raise ServiceError("Target language is empty.")
-            if target_lang not in settings.SUPPORTED_TRANSLATION_LANGUAGES:
-                raise ServiceError(f"Unsupported target language: {target_lang}")
-
+            pipeline = self._get_pipeline()
             prompt = f">>{target_lang}<< {text}"
-            with torch.no_grad():
-                inputs = self.tokenizer([prompt], return_tensors="pt", truncation=True, padding=True).to(DEVICE)
-                outputs = self.model.generate(**inputs, max_length=256, num_beams=1, early_stopping=True)
-                result = self.tokenizer.decode(outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
-                return model_response(result=result)
+            result = pipeline(prompt, max_length=256, num_beams=1, early_stopping=True)[0]
+            translated_text = result.get("translation_text") or result.get("generated_text")
 
-        except ServiceError as se:
-            return model_response(error=str(se))
+            return {"translated_text": translated_text.strip()}
+
         except Exception as e:
-            logger.error(f"Translation error: {e}")
-            return model_response(error="An error occurred during translation.")
-
+            logger.error(f"Translation error for text: '{text[:50]}...' to '{target_lang}'", exc_info=True)
+            raise ServiceError(status_code=500, detail="An internal error occurred during translation.") from e
