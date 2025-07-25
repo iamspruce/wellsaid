@@ -1,0 +1,324 @@
+{
+  "version": "1.0.0",
+  "rules": [
+    {
+      "tag_specific": "replace",
+      "condition": "is_single_token_replace_and_contraction_apostrophe_missing",
+      "output": [
+        "Contraction Error",
+        "Missing apostrophe.",
+        "medium",
+        "Apostrophe needed for the contraction."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "replace",
+      "condition": "is_single_token_replace_and_punctuation_change",
+      "output": [
+        "Punctuation",
+        "Punctuation change.",
+        "medium",
+        "Consider this punctuation change."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "replace",
+      "condition": "is_its_to_its_contraction",
+      "output": [
+        "Contraction/Possessive",
+        "Correction: 'its' (possessive) to 'it's' (it is).",
+        "high",
+        "Use 'it's' for 'it is' or 'it has'."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "replace",
+      "condition": "is_its_contraction_to_its_possessive",
+      "output": [
+        "Contraction/Possessive",
+        "Correction: 'it's' to 'its' (possessive).",
+        "high",
+        "Use 'its' for the possessive form."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "replace",
+      "condition": "is_single_token_replace_and_article_change",
+      "output": [
+        "Article Usage",
+        "Article change.",
+        "medium",
+        "Check if the article is appropriate."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "replace",
+      "condition": "is_single_token_replace_and_verb_tense_change",
+      "output": [
+        "Verb Tense",
+        "Verb tense correction.",
+        "high",
+        "Verb tense changed. Ensure correct tense."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "replace",
+      "condition": "is_single_token_replace_and_verb_form_change",
+      "output": [
+        "Verb Form",
+        "Verb form correction.",
+        "high",
+        "Verb form changed. Ensure correct form (e.g., gerund, infinitive)."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "replace",
+      "condition": "is_single_token_replace_and_verb_choice_change",
+      "output": [
+        "Word Choice",
+        "Verb choice change.",
+        "medium",
+        "Consider using a different verb choice. Check context."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "replace",
+      "condition": "is_single_token_replace_and_noun_number_change",
+      "output": [
+        "Noun Number",
+        "Noun number correction.",
+        "high",
+        "Noun changed from singular/plural. Check if appropriate."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "replace",
+      "condition": "is_single_token_replace_and_spelling_correction",
+      "output": [
+        "Spelling Correction",
+        "Possible typographical error.",
+        "medium",
+        "Likely a typo. Review this spelling change."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "replace",
+      "condition": "is_single_token_replace_and_same_pos",
+      "output": [
+        "Word Choice",
+        "Word choice suggestion.",
+        "medium",
+        "Consider this word choice based on context."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "replace",
+      "condition": "always_true",
+      "output": [
+        "Grammar",
+        "General grammar change.",
+        "medium",
+        "Review this grammatical change."
+      ],
+      "priority": 2
+    },
+    {
+      "tag_specific": "insert",
+      "condition": "is_insert_period",
+      "output": [
+        "Punctuation",
+        "Missing period.",
+        "high",
+        "A period was added to complete the sentence."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "insert",
+      "condition": "is_insert_comma",
+      "output": [
+        "Punctuation",
+        "Missing comma.",
+        "medium",
+        "Consider adding a comma here for clarity."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "insert",
+      "condition": "is_punctuation_insert",
+      "output": [
+        "Punctuation",
+        "Missing punctuation.",
+        "medium",
+        "Punctuation inserted."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "insert",
+      "condition": "is_missing_article",
+      "output": [
+        "Missing Article",
+        "Missing article.",
+        "high",
+        "An article was added. Check if it's needed."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "insert",
+      "condition": "is_missing_preposition",
+      "output": [
+        "Missing Preposition",
+        "Missing preposition.",
+        "medium",
+        "A preposition was added. Check preposition usage."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "insert",
+      "condition": "is_missing_conjunction",
+      "output": [
+        "Missing Conjunction",
+        "Missing conjunction.",
+        "medium",
+        "A conjunction was added to connect clauses/phrases."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "insert",
+      "condition": "is_missing_verb",
+      "output": [
+        "Missing Verb",
+        "Possible missing verb.",
+        "high",
+        "Check if a verb is needed here."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "insert",
+      "condition": "is_missing_adverb",
+      "output": [
+        "Missing Adverb",
+        "Missing adverb.",
+        "low",
+        "An adverb was inserted. Consider if it's needed for emphasis."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "insert",
+      "condition": "always_true",
+      "output": [
+        "Grammar",
+        "Possible missing word.",
+        "medium",
+        "Consider adding this for fluency."
+      ],
+      "priority": 2
+    },
+    {
+      "tag_specific": "delete",
+      "condition": "is_punctuation_delete",
+      "output": [
+        "Punctuation",
+        "Unnecessary punctuation.",
+        "low",
+        "You may not need this punctuation."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "delete",
+      "condition": "is_deleted_misspelling_agin",
+      "output": [
+        "Spelling Correction",
+        "Misspelling removed.",
+        "medium",
+        "The misspelling 'agin' was removed."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "delete",
+      "condition": "is_deleted_informal_word",
+      "output": [
+        "Informal Tone",
+        "Informal word removed.",
+        "low",
+        "An informal word was removed."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "delete",
+      "condition": "is_redundant_intensifier_delete",
+      "output": [
+        "Redundancy",
+        "Possible redundant intensifier.",
+        "low",
+        "An intensifier was removed. Consider for conciseness."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "delete",
+      "condition": "is_redundant_verb_delete",
+      "output": [
+        "Redundancy",
+        "Possible redundant verb.",
+        "medium",
+        "Check if this verb is necessary."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "delete",
+      "condition": "is_redundant_word_det_adp_conj",
+      "output": [
+        "Redundancy",
+        "Possible unnecessary word.",
+        "low",
+        "A redundant word was removed. Review for conciseness."
+      ],
+      "priority": 1
+    },
+    {
+      "tag_specific": "delete",
+      "condition": "always_true",
+      "output": [
+        "Grammar",
+        "Possibly unnecessary word.",
+        "low",
+        "You may not need this part."
+      ],
+      "priority": 2
+    },
+    {
+      "tag_specific": "any",
+      "condition": "always_true",
+      "output": [
+        "Grammar",
+        "Unclassified change.",
+        "low",
+        "No specific explanation available."
+      ],
+      "priority": 2
+    }
+  ]
+}

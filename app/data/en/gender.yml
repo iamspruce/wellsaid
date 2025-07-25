@@ -146,18 +146,6 @@
     cowboys: male
 - type: or
   considerate:
-    - cattle rancher
-  inconsiderate:
-    cattlewoman: female
-    cattleman: male
-- type: or
-  considerate:
-    - cattle ranchers
-  inconsiderate:
-    cattlewomen: female
-    cattlemen: male
-- type: or
-  considerate:
     - chairs
     - chairpersons
     - coordinators
@@ -334,14 +322,14 @@
     - front
     - figurehead
   inconsiderate:
-    'frontwoman, front woman': female
-    'frontman, front man': male
+    "frontwoman, front woman": female
+    "frontman, front man": male
 - type: or
   considerate:
     - figureheads
   inconsiderate:
-    'front women, frontwomen': female
-    'front men, frontmen': male
+    "front women, frontwomen": female
+    "front men, frontmen": male
 - type: or
   considerate:
     - supervisors
@@ -1304,51 +1292,51 @@
     - french
     - the french
   inconsiderate:
-    frenchmen: male
+    - frenchmen
 - type: basic
   considerate:
     - courteous
     - cultured
   inconsiderate:
-    ladylike: female
+    - ladylike
 - type: basic
   considerate:
     - resolutely
     - bravely
   inconsiderate:
-    like a man: male
+    - like a man
 - type: basic
   considerate:
     - birth name
   inconsiderate:
-    maiden name: female
+    - maiden name
 - type: basic
   considerate:
     - first voyage
   inconsiderate:
-    maiden voyage: female
+    - maiden voyage
 - type: basic
   considerate:
     - first flight
   inconsiderate:
-    maiden flight: female
+    - maiden flight
 - type: basic
   considerate:
     - strong enough
   inconsiderate:
-    man enough: male
+    - man enough
 - type: basic
   considerate:
     - upstaging
     - competitiveness
   inconsiderate:
-    oneupmanship: male
+    - oneupmanship
 - type: basic
   considerate:
     - ms.
   inconsiderate:
-    miss.: female
-    mrs.: female
+    - miss.
+    - mrs.
 - type: basic
   considerate:
     - manufactured
@@ -1357,63 +1345,63 @@
     - machine-made
     - constructed
   inconsiderate:
-    manmade: male
+    - manmade
 - type: basic
   considerate:
     - dynamo
   inconsiderate:
-    man of action: male
+    - man of action
 - type: basic
   considerate:
     - scholar
     - writer
     - literary figure
   inconsiderate:
-    man of letters: male
+    - man of letters
 - type: basic
   considerate:
     - sophisticate
   inconsiderate:
-    man of the world: male
+    - man of the world
 - type: basic
   considerate:
     - camaraderie
     - community
     - organization
   inconsiderate:
-    fellowship: male
+    - fellowship
 - type: basic
   considerate:
     - first-year student
     - fresher
   inconsiderate:
-    freshman: male
-    freshwoman: male
+    - freshman
+    - freshwoman
 - type: basic
   considerate:
     - quality construction
     - expertise
   inconsiderate:
-    workmanship: male
+    - workmanship
 - type: basic
   considerate:
     - homemaker
     - homeworker
   inconsiderate:
-    housewife: female
+    - housewife
 - type: basic
   considerate:
     - homemakers
     - homeworkers
   inconsiderate:
-    housewives: female
+    - housewives
 - type: basic
   considerate:
     - loving
     - warm
     - nurturing
   inconsiderate:
-    motherly: female
+    - motherly
 - type: basic
   considerate:
     - human resources
@@ -1426,21 +1414,21 @@
     - staffing
     - combat personnel
   inconsiderate:
-    manpower: male
+    - manpower
 - type: basic
   considerate:
     - emcee
     - moderator
     - convenor
   inconsiderate:
-    master of ceremonies: male
+    - master of ceremonies
 - type: basic
   considerate:
     - skilled
     - authoritative
     - commanding
   inconsiderate:
-    masterful: male
+    - masterful
 - type: basic
   considerate:
     - genius
@@ -1450,53 +1438,53 @@
     - launch
     - originate
   inconsiderate:
-    mastermind: male
+    - mastermind
 - type: basic
   considerate:
     - work of genius
     - chef d’oeuvre
   inconsiderate:
-    masterpiece: male
+    - masterpiece
 - type: basic
   considerate:
     - vision
     - comprehensive plan
   inconsiderate:
-    masterplan: male
+    - masterplan
 - type: basic
   considerate:
     - trump card
     - stroke of genius
   inconsiderate:
-    masterstroke: male
+    - masterstroke
 - type: basic
   considerate:
     - fanatic
     - zealot
     - enthusiast
   inconsiderate:
-    madman: male
-    mad man: male
+    - madman
+    - mad man
 - type: basic
   considerate:
     - fanatics
     - zealots
     - enthusiasts
   inconsiderate:
-    madmen: male
-    mad men: male
+    - madmen
+    - mad men
 - type: basic
   considerate:
     - humankind
   inconsiderate:
-    mankind: male
+    - mankind
 - type: basic
   considerate:
     - staff hour
     - hour of work
   inconsiderate:
-    manhour: male
-    man hour: male
+    - manhour
+    - man hour
 - type: basic
   considerate:
     - staff hours
@@ -1504,8 +1492,8 @@
     - hours of labor
     - hours
   inconsiderate:
-    manhours: male
-    man hours: male
+    - manhours
+    - man hours
 - type: basic
   note: Using gender neutral language means users will help to break up gender stereotypes.
   considerate:
@@ -1549,124 +1537,161 @@
   considerate:
     - ancient civilization
     - ancient people
-  inconsiderate: ancient man
+  inconsiderate:
+    - ancient man
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - author
     - writer
-  inconsiderate: authoress
+  inconsiderate:
+    - authoress
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - average consumer
     - average household
     - average homemaker
-  inconsiderate: average housewife
+  inconsiderate:
+    - average housewife
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: average person
-  inconsiderate: average man
+  considerate:
+    - average person
+  inconsiderate:
+    - average man
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - average wage earner
     - average taxpayer
-  inconsiderate: average working man
+  inconsiderate:
+    - average working man
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: aviator
-  inconsiderate: aviatrix
+  considerate:
+    - aviator
+  inconsiderate:
+    - aviatrix
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: the human family
-  inconsiderate: brotherhood of man
+  considerate:
+    - the human family
+  inconsiderate:
+    - brotherhood of man
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: model
-  inconsiderate: calendar girl
+  considerate:
+    - model
+  inconsiderate:
+    - calendar girl
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - escort
     - prostitute
     - sex worker
-  inconsiderate: call girl
+  inconsiderate:
+    - call girl
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - cleric
     - practicing Christian
     - pillar of the Church
-  inconsiderate: churchman
+  inconsiderate:
+    - churchman
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - english coordinator
     - senior teacher of english
-  inconsiderate: english master
+  inconsiderate:
+    - english master
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: the english
-  inconsiderate: englishmen
+  considerate:
+    - the english
+  inconsiderate:
+    - englishmen
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: executor
-  inconsiderate: executrix
+  considerate:
+    - executor
+  inconsiderate:
+    - executrix
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: founder of
-  inconsiderate: father of *
+  considerate:
+    - founder of
+  inconsiderate:
+    - father of *
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - the founders
     - founding leaders
     - forebears
-  inconsiderate: founding father
+  inconsiderate:
+    - founding father
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - house worker
     - domestic help
-  inconsiderate: housemaid
+  inconsiderate:
+    - housemaid
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - industrial civilization
     - industrial people
-  inconsiderate: industrial man
+  inconsiderate:
+    - industrial man
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: doctor
-  inconsiderate: lady doctor
+  considerate:
+    - doctor
+  inconsiderate:
+    - lady doctor
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: lead
-  inconsiderate: leading lady
+  considerate:
+    - lead
+  inconsiderate:
+    - leading lady
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: virgin
-  inconsiderate: maiden
+  considerate:
+    - virgin
+  inconsiderate:
+    - maiden
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: first race
-  inconsiderate: maiden race
+  considerate:
+    - first race
+  inconsiderate:
+    - maiden race
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: first speech
-  inconsiderate: maiden speech
+  considerate:
+    - first speech
+  inconsiderate:
+    - maiden speech
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: staff a desk
-  inconsiderate: man a desk
+  considerate:
+    - staff a desk
+  inconsiderate:
+    - man a desk
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - ordinary citizen
     - typical person
     - average person
-  inconsiderate: man in the street
+  inconsiderate:
+    - man in the street
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
@@ -1677,19 +1702,26 @@
     - rural community
     - country people
     - country folk
-  inconsiderate: man of the land
+  inconsiderate:
+    - man of the land
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: a faithful dog
-  inconsiderate: mans best friend
+  considerate:
+    - a faithful dog
+  inconsiderate:
+    - mans best friend
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: staff the booth
-  inconsiderate: man the booth
+  considerate:
+    - staff the booth
+  inconsiderate:
+    - man the booth
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: answer the phones
-  inconsiderate: man the phones
+  considerate:
+    - answer the phones
+  inconsiderate:
+    - man the phones
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
@@ -1711,60 +1743,78 @@
   considerate:
     - grand scheme
     - guiding principles
-  inconsiderate: master plan
+  inconsiderate:
+    - master plan
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: become skilled
-  inconsiderate: master the art
+  considerate:
+    - become skilled
+  inconsiderate:
+    - master the art
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: scientists
-  inconsiderate: men of science
+  considerate:
+    - scientists
+  inconsiderate:
+    - men of science
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: birthing nurse
-  inconsiderate: midwife
+  considerate:
+    - birthing nurse
+  inconsiderate:
+    - midwife
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - modern civilization
     - modern people
-  inconsiderate: modern man
+  inconsiderate:
+    - modern man
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - unoccupied territory
     - wasteland
     - deathtrap
-  inconsiderate: no mans land
+  inconsiderate:
+    - no mans land
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: administrative staff
-  inconsiderate: office girls
+  considerate:
+    - administrative staff
+  inconsiderate:
+    - office girls
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: poet
-  inconsiderate: poetess
+  considerate:
+    - poet
+  inconsiderate:
+    - poetess
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: railway worker
-  inconsiderate: railwayman
+  considerate:
+    - railway worker
+  inconsiderate:
+    - railwayman
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - fair
     - sporting
-  inconsiderate: sportsmanlike
+  inconsiderate:
+    - sportsmanlike
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - fairness
     - good humor
     - sense of fair play
-  inconsiderate: sportsmanship
+  inconsiderate:
+    - sportsmanship
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: diplomatic
+  considerate:
+    - diplomatic
   inconsiderate:
     - statesmanlike
     - statesman like
@@ -1774,30 +1824,40 @@
     - cattle worker
     - farmhand
     - drover
-  inconsiderate: stockman
+  inconsiderate:
+    - stockman
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: service entrance
-  inconsiderate: tradesmans entrance
+  considerate:
+    - service entrance
+  inconsiderate:
+    - tradesmans entrance
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:
     - tax commissioner
     - tax office
     - tax collector
-  inconsiderate: tax man
+  inconsiderate:
+    - tax man
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: usher
-  inconsiderate: usherette
+  considerate:
+    - usher
+  inconsiderate:
+    - usherette
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: lawyer
-  inconsiderate: woman lawyer
+  considerate:
+    - lawyer
+  inconsiderate:
+    - woman lawyer
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
-  considerate: painter
-  inconsiderate: woman painter
+  considerate:
+    - painter
+  inconsiderate:
+    - woman painter
 - type: basic
   source: https://radyananda.wordpress.com/2009/06/06/nonsexist-alternative-language-handbook-for-conscious-writers/
   considerate:

@@ -6,6 +6,7 @@ from typing import List, Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ⛺ Paths & Constants
 # ─────────────────────────────────────────────────────────────────────────────
@@ -14,25 +15,27 @@ PROJECT_ROOT = Path(__file__).parent.parent
 APP_DATA_ROOT_DIR = Path.home() / ".wellsaid_app_data"
 MODELS_DIR = APP_DATA_ROOT_DIR / "models"
 NLTK_DATA_DIR = APP_DATA_ROOT_DIR / "nltk_data"
-
-OFFLINE_MODE = os.getenv("OFFLINE_MODE", "false").lower() == "true"
+HF_MODEL_CACHE_DIR = MODELS_DIR / "hf_cache/"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 📁 Ensure Directories Exist (for offline desktop usage)
 # ─────────────────────────────────────────────────────────────────────────────
 
-for directory in [MODELS_DIR, NLTK_DATA_DIR]:
+# Ensure all necessary local directories exist
+for directory in [MODELS_DIR, NLTK_DATA_DIR, MODELS_DIR / "hf_cache", HF_MODEL_CACHE_DIR]:
     try:
         directory.mkdir(parents=True, exist_ok=True)
     except Exception as e:
         logging.warning(f"Failed to create directory {directory}: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 🌍 Environment Variables Setup (only if not already set)
+# 🌍 Environment Variables Setup (only if not already set by OS/Docker)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# These set default environment variables for the *local* application
+# if they are not already defined by the system or a parent process (like Docker)
 env_defaults = {
-    "HF_HOME": str(MODELS_DIR / "hf_cache"),
+    "HF_HOME": str(HF_MODEL_CACHE_DIR),
     "NLTK_DATA": str(NLTK_DATA_DIR),
     "SPACY_DATA": str(MODELS_DIR),
 }
@@ -57,8 +60,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # App basics
-    APP_NAME: str = "WellSaidApp"
+    APP_NAME: str = "Wellsaid"
     API_KEY: str = "your_strong_api_key_here"
+
+    # NEW: OFFLINE_MODE as a Pydantic setting
+    OFFLINE_MODE: bool = False # Default to False if not in .env or env var
 
     # OpenAI
     OPENAI_API_KEY: Optional[str] = None
@@ -68,22 +74,24 @@ class Settings(BaseSettings):
 
     # API server
     HOST: str = "127.0.0.1"
-    PORT: int = 8000
+    PORT: int = 7860
     RELOAD: bool = False
-    WORKER_COUNT: int = 1
+    WORKER_COUNT: int = 2
 
     # NLP models
     SPACY_MODEL_ID: str = "en_core_web_sm"
-    SENTENCE_TRANSFORMER_MODEL_ID: str = "all-MiniLM-L6-v2"
+    SENTENCE_TRANSFORMER_MODEL_ID: str = "sentence-transformers/all-MiniLM-L6-v2"
     SENTENCE_TRANSFORMER_BATCH_SIZE: int = 2
 
-    GRAMMAR_MODEL_ID: str = "visheratin/t5-efficient-mini-grammar-correction"
+    GRAMMAR_MODEL_ID: str = "vennify/t5-base-grammar-correction"
+    GRAMMAR_MODEL_MAX_LENGTH: int = 512
+    GRAMMAR_MODEL_NUM_BEAMS: int = 4
     PARAPHRASE_MODEL_ID: str = "humarin/chatgpt_paraphraser_on_T5_base"
     TONE_MODEL_ID: str = "boltuix/NeuroFeel"
-    TONE_CONFIDENCE_THRESHOLD: float = 1.0
+    TONE_CONFIDENCE_THRESHOLD: float = 10
     TRANSLATION_MODEL_ID: str = "Helsinki-NLP/opus-mt-en-ROMANCE"
 
-    WORDNET_NLTK_ID: str = "wordnet.zip"
+    WORDNET_NLTK_ID: str = "/corpora/wordnet" # todo: make sure to unzip later
 
     SUPPORTED_TRANSLATION_LANGUAGES: List[str] = [
         "fr", "fr_BE", "fr_CA", "fr_FR", "wa", "frp", "oc", "ca", "rm", "lld",
@@ -119,3 +127,55 @@ WORDNET_NLTK_ID = settings.WORDNET_NLTK_ID
 
 # Data
 INCLUSIVE_RULES_DIR = settings.INCLUSIVE_RULES_DIR
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🧠 NLP Model Registry for Utility Use
+# ─────────────────────────────────────────────────────────────────────────────
+
+NLP_MODEL_REGISTRY = {
+    "GRAMMAR_MODEL": {
+        "id": GRAMMAR_MODEL_ID,
+        "name": "Grammar Corrector",
+        "purpose": "Fixes grammatical errors in English sentences.",
+        "example": {
+            "input": "She go to school every day.",
+            "output": "She goes to school every day."
+        }
+    },
+    "PARAPHRASE_MODEL": {
+        "id": PARAPHRASE_MODEL_ID,
+        "name": "Paraphraser",
+        "purpose": "Rewrites a sentence with the same meaning but different words.",
+        "example": {
+            "input": "It's raining cats and dogs.",
+            "output": "It's raining very heavily."
+        }
+    },
+    "TONE_MODEL": {
+        "id": TONE_MODEL_ID,
+        "name": "Tone Classifier",
+        "purpose": "Classifies the emotional tone of a sentence.",
+        "example": {
+            "input": "I can't believe you did that!",
+            "output": "Angry"
+        }
+    },
+    "TRANSLATION_MODEL": {
+        "id": TRANSLATION_MODEL_ID,
+        "name": "Translator (EN → ROMANCE)",
+        "purpose": "Translates English sentences into Romance languages (e.g., Spanish, French).",
+        "example": {
+            "input": "How are you?",
+            "output": "¿Cómo estás?"
+        }
+    },
+    "SENTENCE_TRANSFORMER_MODEL": {
+        "id": SENTENCE_TRANSFORMER_MODEL_ID,
+        "name": "Sentence Similarity Embedder",
+        "purpose": "Generates vector representations of sentences for similarity comparison.",
+        "example": {
+            "input": "The cat is sleeping on the mat.",
+            "output": "[0.123, 0.345, ...]"
+        }
+    }
+}

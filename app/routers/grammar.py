@@ -1,6 +1,6 @@
 # app/routers/grammar.py
 import logging
-from fastapi import APIRouter, Depends, status, HTTPException # HTTPException for 400 validation errors
+from fastapi import APIRouter, Depends, status, HTTPException
 
 from app.schemas.base import TextOnlyRequest # Assuming this Pydantic model exists
 from app.services.grammar import GrammarCorrector # Import the service class
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/grammar", tags=["Grammar"])
 grammar_corrector_service = GrammarCorrector()
 
 
-@router.post("/correct", dependencies=[Depends(verify_api_key)]) # Changed path to /correct for clarity
+@router.post("/correct", dependencies=[Depends(verify_api_key)]) 
 async def correct_grammar_endpoint(payload: TextOnlyRequest):
     """
     Corrects grammar in the provided text.

@@ -1,156 +1,346 @@
 import logging
 import yaml
+import asyncio
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Set, Tuple, Union
+import time
+import re
+
+from spacy.matcher import PhraseMatcher
+import spacy
+
 
 from app.services.base import load_spacy_model
-from app.core.config import settings, APP_NAME, SPACY_MODEL_ID
+from app.core.config import APP_NAME, SPACY_MODEL_ID, INCLUSIVE_RULES_DIR
 from app.core.exceptions import ServiceError
 
 logger = logging.getLogger(f"{APP_NAME}.services.inclusive_language")
 
-
 class InclusiveLanguageChecker:
-    def __init__(self, rules_directory: str = settings.INCLUSIVE_RULES_DIR):
-        self._nlp = None
-        self.matcher = None
-        self.rules = self._load_inclusive_rules(Path(rules_directory))
-
-    def _load_inclusive_rules(self, rules_path: Path) -> Dict[str, Dict]:
-        """
-        Load YAML-based inclusive language rules from the given directory.
-        """
-        if not rules_path.is_dir():
-            logger.error(f"Inclusive language rules directory not found: {rules_path}")
-            raise ServiceError(
-                status_code=500,
-                detail=f"Inclusive language rules directory not found: {rules_path}"
-            )
-
-        rules = {}
-        for yaml_file in rules_path.glob("*.yml"):
-            try:
-                with yaml_file.open(encoding="utf-8") as f:
-                    rule_list = yaml.safe_load(f)
-
-                if not isinstance(rule_list, list):
-                    logger.warning(f"Skipping non-list rule file: {yaml_file}")
-                    continue
-
-                for rule in rule_list:
-                    inconsiderate = rule.get("inconsiderate", [])
-                    considerate = rule.get("considerate", [])
-                    note = rule.get("note", "")
-                    source = rule.get("source", "")
-                    rule_type = rule.get("type", "basic")
-
-                    # Ensure consistent formatting
-                    if isinstance(considerate, str):
-                        considerate = [considerate]
-                    if isinstance(inconsiderate, str):
-                        inconsiderate = [inconsiderate]
-
-                    for phrase in inconsiderate:
-                        rules[phrase.lower()] = {
-                            "considerate": considerate,
-                            "note": note,
-                            "source": source,
-                            "type": rule_type
-                        }
-
-            except Exception as e:
-                logger.error(f"Error loading rule file {yaml_file}: {e}", exc_info=True)
-                raise ServiceError(
-                    status_code=500,
-                    detail=f"Failed to load inclusive language rules: {e}"
-                )
-
-        logger.info(f"Loaded {len(rules)} inclusive language rules from {rules_path}")
-        return rules
+    """
+    A class to check text for inconsiderate language based on a set of YAML rules.
+    It utilizes spaCy for NLP capabilities like tokenization, sentence detection,
+    and part-of-speech tagging, and supports phrase matching, regex patterns,
+    and single-word exact matches.
+    """
+    def __init__(self, rules_directory: str = INCLUSIVE_RULES_DIR):
+        self._nlp = None # spaCy NLP pipeline
+        self.matcher = None # spaCy PhraseMatcher for multi-word phrases
+        self.rules_data: Dict[str, Dict] = {} # Stores all loaded rule data by rule_id
+        self.single_word_rules: Set[str] = set() # Set of single inconsiderate words
+        self.regex_rules: List[Dict] = []  # List of dictionaries for wildcard patterns
+        self.rules_directory = Path(rules_directory)
+        self._load_inclusive_rules(self.rules_directory)
 
     def _get_nlp(self):
         """
-        Lazy-loads the spaCy model for NLP processing.
+        Lazily loads the spaCy NLP model and initializes the PhraseMatcher.
+        This ensures the model is only loaded when first needed.
         """
         if self._nlp is None:
             self._nlp = load_spacy_model(SPACY_MODEL_ID)
+            # Initialize PhraseMatcher for case-insensitive matching
+            self.matcher = PhraseMatcher(self._nlp.vocab, attr="LOWER")
+            logger.info("Loaded spaCy NLP model and initialized PhraseMatcher.")
         return self._nlp
 
-    def _init_matcher(self, nlp):
+    def _load_inclusive_rules(self, rules_path: Path) -> None:
         """
-        Initializes spaCy PhraseMatcher using loaded rules.
+        Loads rules from YAML files in the specified directory.
+        Separates rules into single words, multi-word phrases (for PhraseMatcher),
+        and regex patterns (for wildcards).
         """
-        from spacy.matcher import PhraseMatcher
+        if not rules_path.is_dir():
+            logger.error(f"Inclusive language rules directory not found: {rules_path}")
+            raise ServiceError(status_code=500, detail=f"Rules directory not found: {rules_path}")
 
-        matcher = PhraseMatcher(nlp.vocab, attr="LOWER")
-        for phrase in self.rules:
-            matcher.add(phrase, [nlp.make_doc(phrase)])
+        nlp = self._get_nlp()
+        
+        # Clear existing rules and matcher patterns before loading new ones
+        self.rules_data.clear()
+        self.single_word_rules.clear()
+        self.regex_rules.clear()
+        if self.matcher:
+            self.matcher.clear() 
+            logger.info("Cleared existing PhraseMatcher patterns.")
 
-        logger.info(f"PhraseMatcher initialized with {len(self.rules)} phrases.")
-        return matcher
+        # Iterate through all YAML files in the rules directory
+        for yaml_file in rules_path.glob("*.yml"):
+            try:
+                with yaml_file.open(encoding="utf-8") as f:
+                    rules = yaml.safe_load(f)
 
-    async def check(self, text: str) -> dict:
+                if not isinstance(rules, list):
+                    logger.warning(f"Skipping non-list rule file: {yaml_file.name}")
+                    continue
+
+                for rule in rules:
+                    # Generate a unique rule ID if not explicitly provided in the YAML
+                    rule_id_base = yaml_file.stem
+                    rule_idx = len(self.rules_data) # Use current size for unique ID
+                    rule_id = rule.get("id") or f"{rule_id_base}_{rule_idx}"
+
+                    inconsiderate_terms = rule.get("inconsiderate", [])
+
+                    # Handle both list and dictionary formats for 'inconsiderate' terms
+                    # Dictionary format allows associating additional data (like gender)
+                    terms_to_process = []
+                    if isinstance(inconsiderate_terms, dict):
+                        terms_to_process = [(k, v) for k, v in inconsiderate_terms.items()]
+                    elif isinstance(inconsiderate_terms, list):
+                        terms_to_process = [(t, None) for t in inconsiderate_terms] # No gender info for list items
+                    else:
+                        logger.warning(f"Invalid 'inconsiderate' field in rule {rule_id}: {inconsiderate_terms}")
+                        continue
+
+                    # Store the complete rule data for later retrieval
+                    self.rules_data[rule_id] = rule
+
+                    for term, gender in terms_to_process:
+                        term_lower = str(term).lower().strip()
+                        if not term_lower:
+                            logger.warning(f"Skipping empty term in rule {rule_id}")
+                            continue
+                        # Skip single-character terms unless they are common single-letter words like 'a' or 'i'
+                        if len(term_lower) <= 1 and term_lower not in ["a", "i"]:
+                             logger.warning(f"Skipping single-character term (unless 'a' or 'i'): {term_lower} in rule {rule_id}")
+                             continue
+
+                        # Handle wildcard patterns (e.g., "make * great again")
+                        if "*" in term_lower:
+                            # Create a regex pattern, escaping special characters and replacing '*' with '\S+'
+                            # '\S+' matches one or more non-whitespace characters.
+                            # '\b' ensures word boundaries.
+                            regex_pattern = re.escape(term_lower).replace(r"\*", r"\S+")
+                            regex_pattern = rf"\b{regex_pattern}\b"
+                            self.regex_rules.append({
+                                "rule_id": rule_id,
+                                "pattern": re.compile(regex_pattern, re.IGNORECASE),
+                                "original_term": term_lower,
+                                "gender": gender # Store gender info if available
+                            })
+                        elif " " in term_lower:
+                            # For multi-word phrases, create a spaCy Doc object and add to PhraseMatcher
+                            pattern = nlp.make_doc(term_lower)
+                            self.matcher.add(rule_id, [pattern])
+                        else:
+                            # For single words, add to a set for efficient lookup
+                            self.single_word_rules.add(term_lower)
+
+            except yaml.YAMLError as e:
+                logger.error(f"YAML error in file {yaml_file.name}: {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error loading rules from {yaml_file.name}: {e}")
+
+        logger.info(f"Total rules loaded: {len(self.rules_data)}")
+        logger.debug(f"Single words to flag: {sorted(list(self.single_word_rules))}")
+        logger.debug(f"Regex patterns: {[r['original_term'] for r in self.regex_rules]}")
+
+    async def check(self, text: str) -> Dict[str, List[Dict]]:
         """
-        Checks a string for non-inclusive language based on rule definitions.
+        Checks the input text for inconsiderate language based on the loaded rules.
+        Identifies matches, resolves overlaps, and provides suggestions and context.
         """
         text = text.strip()
         if not text:
-            raise ServiceError(status_code=400, detail="Input text is empty for inclusive language check.")
+            raise ServiceError(status_code=400, detail="Input text is empty.")
 
+        start_time = time.time()
         try:
             nlp = self._get_nlp()
-            if self.matcher is None:
-                self.matcher = self._init_matcher(nlp)
+            # Process the text with spaCy asynchronously to avoid blocking
+            doc = await asyncio.to_thread(nlp, text)
+            
+            # List to store all potential matches found across different rule types
+            all_potential_matches: List[Dict] = []
 
-            doc = nlp(text)
-            matches = self.matcher(doc)
-            results = []
-            matched_spans = set()
+            # 1. Collect matches from PhraseMatcher (multi-word phrases)
+            for match_id, start, end in self.matcher(doc):
+                span = doc[start:end]
+                rule_id = nlp.vocab.strings[match_id]
+                rule = self.rules_data.get(rule_id)
+                
+                # Validate context if a rule is found and context condition applies
+                if rule and self._is_valid_context(span, rule):
+                    term = span.text
+                    gender = None
+                    # Attempt to retrieve gender information if the rule's 'inconsiderate' field is a dictionary
+                    inconsiderate_terms_data = rule.get("inconsiderate", {})
+                    if isinstance(inconsiderate_terms_data, dict):
+                        gender = next(
+                            (g for t, g in inconsiderate_terms_data.items() if t.lower() == term.lower()),
+                            None
+                        )
 
-            # Match exact phrases
-            for match_id, start, end in matches:
-                phrase = nlp.vocab.strings[match_id].lower()
-                if any(s <= start < e or s < end <= e for s, e in matched_spans):
-                    continue  # Avoid overlapping matches
-
-                matched_spans.add((start, end))
-                rule = self.rules.get(phrase)
-                if rule:
-                    results.append({
-                        "term": doc[start:end].text,
-                        "type": rule["type"],
-                        "note": rule["note"],
-                        "suggestions": rule["considerate"],
-                        "context": doc[start:end].sent.text,
-                        "start_char": doc[start].idx,
-                        "end_char": doc[end - 1].idx + len(doc[end - 1]),
-                        "source": rule["source"]
+                    all_potential_matches.append({
+                        "start_char": span.start_char,
+                        "end_char": span.end_char,
+                        "term": term,
+                        "rule_id": rule_id,
+                        "gender": gender
                     })
 
-            # Match individual token lemmas (fallback)
+            # 2. Collect matches from Regex patterns
+            for regex_rule_data in self.regex_rules:
+                rule_id = regex_rule_data["rule_id"]
+                pattern = regex_rule_data["pattern"]
+                gender = regex_rule_data["gender"]
+                rule = self.rules_data.get(rule_id)
+
+                # Find all occurrences of the regex pattern in the original text
+                for match in pattern.finditer(text):
+                    start_char, end_char = match.span()
+                    term = text[start_char:end_char]
+                    
+                    # Create a spaCy span for the matched text to use for context validation
+                    matched_span_in_doc = doc.char_span(start_char, end_char)
+                    
+                    if matched_span_in_doc and rule and self._is_valid_context(matched_span_in_doc, rule):
+                        all_potential_matches.append({
+                            "start_char": start_char,
+                            "end_char": end_char,
+                            "term": term,
+                            "rule_id": rule_id,
+                            "gender": gender
+                        })
+                    # Log if a regex match cannot be mapped to a valid spaCy span for context checking
+                    elif not matched_span_in_doc:
+                        logger.debug(f"Regex match '{term}' at ({start_char},{end_char}) could not be mapped to a spaCy span.")
+
+
+            # 3. Collect matches from single word rules
             for token in doc:
-                lemma = token.lemma_.lower()
-                if (token.i, token.i + 1) in matched_spans:
-                    continue  # Already matched in phrase
+                token_lower = token.text.lower()
+                # Check if the token is in our set of single inconsiderate words
+                if token_lower in self.single_word_rules:
+                    rule_id = None
+                    gender = None
+                    # Find the corresponding rule_id and gender for this single word
+                    for r_id, r_data in self.rules_data.items():
+                        inconsiderate_terms_data = r_data.get("inconsiderate", {})
+                        if isinstance(inconsiderate_terms_data, dict) and token_lower in inconsiderate_terms_data:
+                            rule_id = r_id
+                            gender = inconsiderate_terms_data[token_lower]
+                            break
+                        elif isinstance(inconsiderate_terms_data, list) and token_lower in [t.lower() for t in inconsiderate_terms_data]:
+                            rule_id = r_id
+                            break
 
-                if lemma in self.rules:
-                    rule = self.rules[lemma]
-                    results.append({
-                        "term": token.text,
-                        "type": rule["type"],
-                        "note": rule["note"],
-                        "suggestions": rule["considerate"],
-                        "context": token.sent.text,
-                        "start_char": token.idx,
-                        "end_char": token.idx + len(token),
-                        "source": rule["source"]
-                    })
+                    # Validate context before adding to potential matches
+                    if rule_id and self._is_valid_context(token, self.rules_data[rule_id]):
+                        all_potential_matches.append({
+                            "start_char": token.idx,
+                            "end_char": token.idx + len(token.text),
+                            "term": token.text,
+                            "rule_id": rule_id,
+                            "gender": gender
+                        })
 
-            return {"issues": results}
+            # Sort all potential matches:
+            # 1. By start character (earlier matches first)
+            # 2. By length of the match (longer matches first for overlap resolution)
+            all_potential_matches.sort(key=lambda x: (x["start_char"], -(x["end_char"] - x["start_char"])))
+
+            final_results: List[Dict] = []
+            # Keep track of text ranges that have already been covered by an accepted match
+            covered_ranges: List[Tuple[int, int]] = [] 
+
+            def is_covered(start, end, covered_ranges):
+                """Checks if the given span (start, end) overlaps with any already covered range."""
+                for c_start, c_end in covered_ranges:
+                    # Check for any overlap
+                    if max(c_start, start) < min(c_end, end): 
+                        return True
+                return False
+
+            issue_counter = 1
+            for match_info in all_potential_matches:
+                start_char = match_info["start_char"]
+                end_char = match_info["end_char"]
+
+                # Only add the match if it doesn't overlap with an already accepted match
+                if not is_covered(start_char, end_char, covered_ranges):
+                    rule_id = match_info["rule_id"]
+                    rule = self.rules_data[rule_id]
+                    term = match_info["term"]
+                    gender = match_info["gender"]
+
+                    # Find the sentence containing the match for context
+                    context_sent = None
+                    for sent in doc.sents:
+                        if sent.start_char <= start_char < sent.end_char:
+                            context_sent = sent
+                            break
+                    # Fallback to full text if sentence boundary isn't clear or match spans sentences
+                    context = context_sent.text if context_sent else text 
+
+                    # Calculate relative start/end for highlighting within the context sentence
+                    sent_start_char = context_sent.start_char if context_sent else 0
+                    relative_start = start_char - sent_start_char
+                    relative_end = end_char - sent_start_char
+
+                    # Format the context with a highlight span for the inconsiderate term
+                    formatted_context = (
+                        context[:relative_start] +
+                        "<span class='highlight'>" +
+                        context[relative_start:relative_end] +
+                        "</span>" +
+                        context[relative_end:]
+                    )
+
+                    issue = {
+                        "id": f"issue_{issue_counter}",
+                        "term": term,
+                        "type": rule.get("type", "Unknown"),
+                        "note": rule.get("note", "No specific note."),
+                        "suggestions": rule.get("considerate", []),
+                        "context": context,
+                        "formatted_context": formatted_context,
+                        "start_char": start_char,
+                        "end_char": end_char,
+                        "source": rule.get("source", "Custom"),
+                        "gender": gender
+                    }
+                    final_results.append(issue)
+                    issue_counter += 1
+                    # Add the current match's span to covered ranges
+                    covered_ranges.append((start_char, end_char))
+                    # Keep covered_ranges sorted by start_char for potential future optimizations
+                    covered_ranges.sort()
+
+
+            end_time = time.time()
+            logger.info(f"Inclusive check completed in {end_time - start_time:.2f} seconds. Found {len(final_results)} issues.")
+            return {"issues": final_results}
 
         except Exception as e:
-            logger.error(f"Inclusive language check error for text: '{text[:50]}...'", exc_info=True)
-            raise ServiceError(
-                status_code=500,
-                detail="An internal error occurred during inclusive language checking."
-            ) from e
+            logger.error(f"Inclusive check error: {e}", exc_info=True)
+            raise ServiceError(status_code=500, detail="Internal error during inclusive check.")
+
+    def _is_valid_context(self, span_or_token: Union[spacy.tokens.Token, spacy.tokens.Span], rule: Dict) -> bool:
+        """
+        Checks if the given spaCy token or span satisfies the rule's context condition.
+        Currently supports 'when referring to a person' condition.
+        """
+        condition = rule.get("condition")
+        if not condition:
+            return True # No specific condition, so it's always valid
+
+        if "when referring to a person" in condition.lower():
+            token = None
+            if isinstance(span_or_token, spacy.tokens.Span):
+                # For a span, use its root token as the primary token for POS/DEP check
+                token = span_or_token.root 
+            elif isinstance(span_or_token, spacy.tokens.Token):
+                token = span_or_token
+            else:
+                logger.warning(f"Unexpected type for span_or_token in _is_valid_context: {type(span_or_token)}. Returning True.")
+                return True # Default to True if type is not recognized to avoid false negatives
+
+            if token:
+                # Check if the token's part-of-speech (POS) or dependency (DEP) indicates it refers to a person.
+                # NOUN (noun), PRON (pronoun), PROPN (proper noun) are common POS tags for persons.
+                # nsubj (nominal subject), dobj (direct object), pobj (object of preposition) are common dependencies.
+                return token.pos_ in ["NOUN", "PRON", "PROPN"] or token.dep_ in ["nsubj", "dobj", "pobj"]
+            return False # If no valid token could be extracted, it doesn't refer to a person in this context
+        return True # Return True for any other conditions not explicitly handled

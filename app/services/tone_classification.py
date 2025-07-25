@@ -1,5 +1,4 @@
 import logging
-import torch
 from app.services.base import load_hf_pipeline
 from app.core.config import APP_NAME, settings
 from app.core.exceptions import ServiceError, ModelNotDownloadedError

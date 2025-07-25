@@ -1,0 +1,140 @@
+{
+  "version": "1.0.0",
+  "rules": [
+    { "pattern": "\\bLets\\b", "replacement": "Let's", "priority": 1 },
+    { "pattern": "\\bWheres\\b", "replacement": "Where's", "priority": 1 },
+    {
+      "pattern": "\\btheyre\\b",
+      "replacement": "they're",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\btheres\\b",
+      "replacement": "there's",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bwerent\\b",
+      "replacement": "weren't",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bdont\\b",
+      "replacement": "don't",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bcant\\b",
+      "replacement": "can't",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bwont\\b",
+      "replacement": "won't",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bcouldnt\\b",
+      "replacement": "couldn't",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bwouldnt\\b",
+      "replacement": "wouldn't",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bisnt\\b",
+      "replacement": "isn't",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\barent\\b",
+      "replacement": "aren't",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bhadnt\\b",
+      "replacement": "hadn't",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\byoure\\b",
+      "replacement": "you're",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\byoull\\b",
+      "replacement": "you'll",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bhes\\b",
+      "replacement": "he's",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bshes\\b",
+      "replacement": "she's",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bagin\\b",
+      "replacement": "again",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bteh\\b",
+      "replacement": "the",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\balot\\b",
+      "replacement": "a lot",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bwierd\\b",
+      "replacement": "weird",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\brecieve\\b",
+      "replacement": "receive",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bseperate\\b",
+      "replacement": "separate",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    {
+      "pattern": "\\bdefinately\\b",
+      "replacement": "definitely",
+      "flags": "IGNORECASE",
+      "priority": 1
+    },
+    { "pattern": "\\s{2,}", "replacement": " ", "priority": 2 }
+  ]
+}
